@@ -9,7 +9,7 @@ import {
 
 import "./Sidebar.css";
 
-export default function Sidebar() {
+export default function Sidebar({ pagina, setPagina }) {
   return (
     <aside className="sidebar">
       <div className="logo">
@@ -18,12 +18,47 @@ export default function Sidebar() {
       </div>
 
       <nav>
-        <button><FaHome /> Dashboard</button>
-        <button><FaFileContract /> Contratos</button>
-        <button><FaCalendarAlt /> Medições</button>
-        <button><FaCamera /> Relatórios</button>
-        <button><FaDatabase /> Backup</button>
-        <button><FaCog /> Configurações</button>
+        <button
+          className={pagina === "dashboard" ? "active" : ""}
+          onClick={() => setPagina("dashboard")}
+        >
+          <FaHome /> Dashboard
+        </button>
+
+        <button
+          className={pagina === "contratos" ? "active" : ""}
+          onClick={() => setPagina("contratos")}
+        >
+          <FaFileContract /> Contratos
+        </button>
+
+        <button
+          className={pagina === "medicoes" ? "active" : ""}
+          onClick={() => setPagina("medicoes")}
+        >
+          <FaCalendarAlt /> Medições
+        </button>
+
+        <button
+          className={pagina === "relatorios" ? "active" : ""}
+          onClick={() => setPagina("relatorios")}
+        >
+          <FaCamera /> Relatórios
+        </button>
+
+        <button
+          className={pagina === "backup" ? "active" : ""}
+          onClick={() => setPagina("backup")}
+        >
+          <FaDatabase /> Backup
+        </button>
+
+        <button
+          className={pagina === "configuracoes" ? "active" : ""}
+          onClick={() => setPagina("configuracoes")}
+        >
+          <FaCog /> Configurações
+        </button>
       </nav>
     </aside>
   );

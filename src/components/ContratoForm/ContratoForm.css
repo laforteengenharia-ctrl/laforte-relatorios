@@ -1,0 +1,51 @@
+.form-contrato{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.campo{
+    display:flex;
+    flex-direction:column;
+}
+
+.campo label{
+    margin-bottom:6px;
+    font-weight:600;
+}
+
+.campo input,
+.campo select{
+    padding:10px;
+    border:1px solid #d9d9d9;
+    border-radius:8px;
+    font-size:15px;
+}
+
+.linha{
+    display:flex;
+    gap:15px;
+}
+
+.linha .campo{
+    flex:1;
+}
+
+.botoes-modal{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:10px;
+}
+
+.botoes-modal button{
+    padding:10px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.salvar{
+    background:#1b6ef3;
+    color:white;
+}
