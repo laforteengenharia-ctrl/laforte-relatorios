@@ -12,11 +12,13 @@ export default function Contratos() {
 
   const [modalAberto, setModalAberto] = useState(false);
 
-
   const [contratos, setContratos] = useState([]);
+
+  const [editando, setEditando] = useState(false);
 
 
   const [contrato, setContrato] = useState({
+    id: null,
     numero: "",
     nome: "",
     cliente: "",
@@ -61,9 +63,46 @@ export default function Contratos() {
 
 
 
+  function novoContrato() {
+
+    setContrato({
+
+      id: null,
+      numero: "",
+      nome: "",
+      cliente: "",
+      cidade: "",
+      uf: "SC",
+      status: "Ativo",
+
+    });
+
+    setEditando(false);
+
+    setModalAberto(true);
+
+  }
+
+
+
+
+  function editarContrato(item) {
+
+    setContrato(item);
+
+    setEditando(true);
+
+    setModalAberto(true);
+
+  }
+
+
+
+
   async function salvarContrato(evento) {
 
     evento.preventDefault();
+
 
 
     if (
@@ -82,7 +121,40 @@ export default function Contratos() {
 
 
 
-    await db.contratos.add(contrato);
+    if (editando) {
+
+
+      await db.contratos.update(
+
+        contrato.id,
+
+        contrato
+
+      );
+
+
+    } else {
+
+
+      await db.contratos.add({
+
+        numero: contrato.numero,
+
+        nome: contrato.nome,
+
+        cliente: contrato.cliente,
+
+        cidade: contrato.cidade,
+
+        uf: contrato.uf,
+
+        status: contrato.status,
+
+      });
+
+
+    }
+
 
 
 
@@ -90,23 +162,39 @@ export default function Contratos() {
 
 
 
-    setContrato({
-
-      numero: "",
-      nome: "",
-      cliente: "",
-      cidade: "",
-      uf: "SC",
-      status: "Ativo",
-
-    });
-
-
-
     setModalAberto(false);
 
 
+
   }
+
+
+
+
+
+  async function excluirContrato(id) {
+
+
+    const confirmar = window.confirm(
+
+      "Deseja realmente excluir este contrato?"
+
+    );
+
+
+    if (!confirmar) return;
+
+
+
+    await db.contratos.delete(id);
+
+
+
+    carregarContratos();
+
+
+  }
+
 
 
 
@@ -135,7 +223,7 @@ export default function Contratos() {
 
           className="novo-btn"
 
-          onClick={() => setModalAberto(true)}
+          onClick={novoContrato}
 
         >
 
@@ -145,6 +233,7 @@ export default function Contratos() {
 
 
       </div>
+
 
 
 
@@ -160,6 +249,7 @@ export default function Contratos() {
         />
 
       </div>
+
 
 
 
@@ -188,17 +278,23 @@ export default function Contratos() {
 
 
 
+
+
         <tbody>
 
 
           {
+
             contratos.length === 0 ? (
 
               <tr>
 
                 <td
+
                   colSpan="5"
+
                   className="vazio"
+
                 >
 
                   Nenhum contrato cadastrado.
@@ -215,6 +311,7 @@ export default function Contratos() {
 
                 <tr key={item.id}>
 
+
                   <td>{item.numero}</td>
 
                   <td>{item.nome}</td>
@@ -223,22 +320,45 @@ export default function Contratos() {
 
                   <td>{item.status}</td>
 
+
                   <td>
 
-                    <button>
+
+                    <button
+
+                      onClick={() => editarContrato(item)}
+
+                    >
+
                       Editar
+
                     </button>
+
+
+
+                    <button
+
+                      onClick={() => excluirContrato(item.id)}
+
+                    >
+
+                      Excluir
+
+                    </button>
+
 
                   </td>
 
+
                 </tr>
+
 
               ))
 
 
             )
-          }
 
+          }
 
 
         </tbody>
@@ -255,7 +375,11 @@ export default function Contratos() {
 
         aberto={modalAberto}
 
-        titulo="Novo Contrato"
+        titulo={
+          editando
+            ? "Editar Contrato"
+            : "Novo Contrato"
+        }
 
         onClose={() => setModalAberto(false)}
 
@@ -264,18 +388,25 @@ export default function Contratos() {
 
         <ContratoForm
 
+
           contrato={contrato}
+
 
           atualizarCampo={atualizarCampo}
 
+
           onCancelar={() => setModalAberto(false)}
 
+
           onSalvar={salvarContrato}
+
 
         />
 
 
       </Modal>
+
+
 
 
 
