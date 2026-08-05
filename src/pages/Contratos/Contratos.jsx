@@ -14,7 +14,12 @@ export default function Contratos() {
 
   const [contratos, setContratos] = useState([]);
 
+  const [contratosFiltrados, setContratosFiltrados] = useState([]);
+
+  const [pesquisa, setPesquisa] = useState("");
+
   const [editando, setEditando] = useState(false);
+
 
 
   const [contrato, setContrato] = useState({
@@ -29,13 +34,17 @@ export default function Contratos() {
 
 
 
+
   async function carregarContratos() {
 
     const lista = await db.contratos.toArray();
 
     setContratos(lista);
 
+    setContratosFiltrados(lista);
+
   }
+
 
 
 
@@ -44,6 +53,33 @@ export default function Contratos() {
     carregarContratos();
 
   }, []);
+
+
+
+
+
+  useEffect(() => {
+
+    const texto = pesquisa.toLowerCase();
+
+
+    const filtrados = contratos.filter((item) =>
+
+      item.numero.toLowerCase().includes(texto) ||
+
+      item.nome.toLowerCase().includes(texto) ||
+
+      item.cliente.toLowerCase().includes(texto)
+
+    );
+
+
+    setContratosFiltrados(filtrados);
+
+
+  }, [pesquisa, contratos]);
+
+
 
 
 
@@ -63,6 +99,8 @@ export default function Contratos() {
 
 
 
+
+
   function novoContrato() {
 
     setContrato({
@@ -77,11 +115,14 @@ export default function Contratos() {
 
     });
 
+
     setEditando(false);
 
     setModalAberto(true);
 
   }
+
+
 
 
 
@@ -95,6 +136,8 @@ export default function Contratos() {
     setModalAberto(true);
 
   }
+
+
 
 
 
@@ -118,6 +161,8 @@ export default function Contratos() {
       return;
 
     }
+
+
 
 
 
@@ -157,16 +202,15 @@ export default function Contratos() {
 
 
 
-
     await carregarContratos();
-
 
 
     setModalAberto(false);
 
 
-
   }
+
+
 
 
 
@@ -176,9 +220,7 @@ export default function Contratos() {
 
 
     const confirmar = window.confirm(
-
       "Deseja realmente excluir este contrato?"
-
     );
 
 
@@ -187,7 +229,6 @@ export default function Contratos() {
 
 
     await db.contratos.delete(id);
-
 
 
     carregarContratos();
@@ -200,12 +241,15 @@ export default function Contratos() {
 
 
 
+
   return (
 
     <div className="contratos-page">
 
 
+
       <div className="topo">
+
 
         <div>
 
@@ -216,6 +260,7 @@ export default function Contratos() {
           </p>
 
         </div>
+
 
 
 
@@ -232,7 +277,10 @@ export default function Contratos() {
         </button>
 
 
+
       </div>
+
+
 
 
 
@@ -240,15 +288,25 @@ export default function Contratos() {
 
       <div className="pesquisa">
 
+
         <input
 
           type="text"
 
           placeholder="Pesquisar contrato..."
 
+          value={pesquisa}
+
+          onChange={(e) =>
+            setPesquisa(e.target.value)
+          }
+
         />
 
+
       </div>
+
+
 
 
 
@@ -259,6 +317,7 @@ export default function Contratos() {
 
 
         <thead>
+
 
           <tr>
 
@@ -272,7 +331,9 @@ export default function Contratos() {
 
             <th>Ações</th>
 
+
           </tr>
+
 
         </thead>
 
@@ -285,9 +346,11 @@ export default function Contratos() {
 
           {
 
-            contratos.length === 0 ? (
+            contratosFiltrados.length === 0 ? (
+
 
               <tr>
+
 
                 <td
 
@@ -297,9 +360,11 @@ export default function Contratos() {
 
                 >
 
-                  Nenhum contrato cadastrado.
+                  Nenhum contrato encontrado.
+
 
                 </td>
+
 
               </tr>
 
@@ -307,7 +372,8 @@ export default function Contratos() {
             ) : (
 
 
-              contratos.map((item) => (
+              contratosFiltrados.map((item) => (
+
 
                 <tr key={item.id}>
 
@@ -321,12 +387,15 @@ export default function Contratos() {
                   <td>{item.status}</td>
 
 
+
                   <td>
 
 
                     <button
 
-                      onClick={() => editarContrato(item)}
+                      onClick={() =>
+                        editarContrato(item)
+                      }
 
                     >
 
@@ -338,13 +407,16 @@ export default function Contratos() {
 
                     <button
 
-                      onClick={() => excluirContrato(item.id)}
+                      onClick={() =>
+                        excluirContrato(item.id)
+                      }
 
                     >
 
                       Excluir
 
                     </button>
+
 
 
                   </td>
@@ -358,6 +430,7 @@ export default function Contratos() {
 
             )
 
+
           }
 
 
@@ -365,6 +438,7 @@ export default function Contratos() {
 
 
       </table>
+
 
 
 
@@ -381,25 +455,24 @@ export default function Contratos() {
             : "Novo Contrato"
         }
 
-        onClose={() => setModalAberto(false)}
+        onClose={() =>
+          setModalAberto(false)
+        }
 
       >
 
 
         <ContratoForm
 
-
           contrato={contrato}
-
 
           atualizarCampo={atualizarCampo}
 
-
-          onCancelar={() => setModalAberto(false)}
-
+          onCancelar={() =>
+            setModalAberto(false)
+          }
 
           onSalvar={salvarContrato}
-
 
         />
 
