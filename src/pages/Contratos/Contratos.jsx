@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./Contratos.css";
 
@@ -13,6 +13,9 @@ export default function Contratos() {
   const [modalAberto, setModalAberto] = useState(false);
 
 
+  const [contratos, setContratos] = useState([]);
+
+
   const [contrato, setContrato] = useState({
     numero: "",
     nome: "",
@@ -24,14 +27,37 @@ export default function Contratos() {
 
 
 
+  async function carregarContratos() {
+
+    const lista = await db.contratos.toArray();
+
+    setContratos(lista);
+
+  }
+
+
+
+  useEffect(() => {
+
+    carregarContratos();
+
+  }, []);
+
+
+
+
   function atualizarCampo(campo, valor) {
 
     setContrato({
+
       ...contrato,
+
       [campo]: valor,
+
     });
 
   }
+
 
 
 
@@ -60,6 +86,10 @@ export default function Contratos() {
 
 
 
+    await carregarContratos();
+
+
+
     setContrato({
 
       numero: "",
@@ -76,10 +106,8 @@ export default function Contratos() {
     setModalAberto(false);
 
 
-
-    alert("Contrato salvo com sucesso!");
-
   }
+
 
 
 
@@ -136,6 +164,7 @@ export default function Contratos() {
 
 
 
+
       <table className="tabela">
 
 
@@ -155,7 +184,6 @@ export default function Contratos() {
 
           </tr>
 
-
         </thead>
 
 
@@ -163,26 +191,61 @@ export default function Contratos() {
         <tbody>
 
 
-          <tr>
+          {
+            contratos.length === 0 ? (
 
-            <td
-              colSpan="5"
-              className="vazio"
-            >
+              <tr>
 
-              Nenhum contrato cadastrado.
+                <td
+                  colSpan="5"
+                  className="vazio"
+                >
 
-            </td>
+                  Nenhum contrato cadastrado.
+
+                </td>
+
+              </tr>
 
 
-          </tr>
+            ) : (
+
+
+              contratos.map((item) => (
+
+                <tr key={item.id}>
+
+                  <td>{item.numero}</td>
+
+                  <td>{item.nome}</td>
+
+                  <td>{item.cliente}</td>
+
+                  <td>{item.status}</td>
+
+                  <td>
+
+                    <button>
+                      Editar
+                    </button>
+
+                  </td>
+
+                </tr>
+
+              ))
+
+
+            )
+          }
+
 
 
         </tbody>
 
 
-
       </table>
+
 
 
 
@@ -213,7 +276,6 @@ export default function Contratos() {
 
 
       </Modal>
-
 
 
 
