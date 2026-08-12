@@ -1,0 +1,131 @@
+.frentes-page {
+  padding: 30px;
+}
+
+.frentes-topo {
+  margin-bottom: 30px;
+}
+
+.frentes-topo h1 {
+  margin: 0 0 8px 0;
+  font-size: 30px;
+}
+
+.frentes-topo p {
+  margin: 0;
+  color: #64748b;
+}
+
+.frentes-cadastro {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.frentes-cadastro h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.frentes-cadastro form {
+  display: flex;
+  gap: 12px;
+}
+
+.frentes-cadastro input,
+.frentes-cadastro select {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+}
+
+.frentes-cadastro button {
+  border: none;
+  background: #0f172a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.frentes-cadastro button:hover {
+  background: #1e293b;
+}
+
+.lista-frentes h2 {
+  margin-bottom: 20px;
+}
+
+.frentes-vazio {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+}
+
+.frentes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.frente-card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.frente-card span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.frente-card h3 {
+  margin: 5px 0 0 0;
+  font-size: 18px;
+}
+
+.frente-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.frente-acoes button {
+  border: none;
+  background: #e2e8f0;
+  color: #0f172a;
+  padding: 8px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.frente-acoes button:hover {
+  background: #cbd5e1;
+}
+
+.frente-acoes button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.frente-acoes button:last-child {
+  background: #ef4444;
+  color: white;
+}
+
+.frente-acoes button:last-child:hover {
+  background: #dc2626;
+}
