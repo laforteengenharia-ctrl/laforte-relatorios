@@ -18,7 +18,6 @@ export default function Frentes() {
   const [editandoId, setEditandoId] = useState(null);
 
 
-
   async function carregarContratos() {
 
     const lista = await db.contratos.toArray();
@@ -33,7 +32,6 @@ export default function Frentes() {
     }
 
   }
-
 
 
   async function carregarFrentes(contratoId) {
@@ -58,13 +56,11 @@ export default function Frentes() {
   }
 
 
-
   useEffect(() => {
 
     carregarContratos();
 
   }, []);
-
 
 
   useEffect(() => {
@@ -76,7 +72,6 @@ export default function Frentes() {
     setNome("");
 
   }, [contratoSelecionado]);
-
 
 
   async function adicionarOuSalvarFrente(evento) {
@@ -95,12 +90,11 @@ export default function Frentes() {
 
     if (!nome.trim()) {
 
-      alert("Informe o nome da frente de obra.");
+      alert("Informe o nome da frente/obra.");
 
       return;
 
     }
-
 
 
     if (editandoId) {
@@ -150,7 +144,6 @@ export default function Frentes() {
   }
 
 
-
   function iniciarEdicao(frente) {
 
     setEditandoId(frente.id);
@@ -158,7 +151,6 @@ export default function Frentes() {
     setNome(frente.nome);
 
   }
-
 
 
   function cancelarEdicao() {
@@ -170,12 +162,11 @@ export default function Frentes() {
   }
 
 
-
   async function excluirFrente(id) {
 
     const confirmar = window.confirm(
 
-      "Deseja realmente excluir esta frente de obra?"
+      "Deseja realmente excluir esta frente/obra?"
 
     );
 
@@ -189,7 +180,6 @@ export default function Frentes() {
     await reorganizarOrdem();
 
   }
-
 
 
   async function reorganizarOrdem() {
@@ -218,7 +208,6 @@ export default function Frentes() {
     await carregarFrentes(contratoSelecionado);
 
   }
-
 
 
   async function moverFrente(id, direcao) {
@@ -278,7 +267,6 @@ export default function Frentes() {
   }
 
 
-
   return (
 
     <div className="frentes-page">
@@ -288,10 +276,10 @@ export default function Frentes() {
 
         <div>
 
-          <h1>Frentes de Obra</h1>
+          <h1>Frentes / Obras</h1>
 
           <p>
-            Organize as frentes de serviço de cada contrato.
+            Cadastre as frentes ou obras vinculadas a cada contrato.
           </p>
 
         </div>
@@ -315,7 +303,7 @@ export default function Frentes() {
             </p>
 
             <p>
-              Cadastre um contrato antes de criar uma frente de obra.
+              Cadastre um contrato antes de criar uma frente/obra.
             </p>
 
           </div>
@@ -362,8 +350,8 @@ export default function Frentes() {
           <h2>
 
             {editandoId
-              ? "Editar Frente de Obra"
-              : "Nova Frente de Obra"}
+              ? "Editar Frente / Obra"
+              : "Nova Frente / Obra"}
 
           </h2>
 
@@ -378,7 +366,7 @@ export default function Frentes() {
 
               type="text"
 
-              placeholder="Ex.: Fundação"
+              placeholder="Ex.: ETA - Ingleses"
 
               value={nome}
 
@@ -393,7 +381,7 @@ export default function Frentes() {
 
               {editandoId
                 ? "Salvar Alteração"
-                : "+ Adicionar Frente"}
+                : "+ Adicionar Frente / Obra"}
 
             </button>
 
@@ -428,7 +416,7 @@ export default function Frentes() {
       <div className="lista-frentes">
 
 
-        <h2>Frentes cadastradas</h2>
+        <h2>Frentes / Obras cadastradas</h2>
 
 
         {frentes.length === 0 ? (
@@ -436,7 +424,7 @@ export default function Frentes() {
           <div className="frentes-vazio">
 
             <p>
-              Nenhuma frente de obra cadastrada para este contrato.
+              Nenhuma frente/obra cadastrada para este contrato.
             </p>
 
           </div>
@@ -460,7 +448,7 @@ export default function Frentes() {
                 <div>
 
                   <span>
-                    Frente {frente.ordem}
+                    Frente / Obra {frente.ordem}
                   </span>
 
                   <h3>
