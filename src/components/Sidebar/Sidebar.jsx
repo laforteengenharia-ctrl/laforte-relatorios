@@ -6,17 +6,42 @@ import {
   FaCamera,
   FaDatabase,
   FaCog,
+  FaUsers,
+  FaSignOutAlt,
 } from "react-icons/fa";
+
+import { supabase } from "../../services/supabase";
 
 import "./Sidebar.css";
 
-
 export default function Sidebar({ pagina, setPagina }) {
 
+  async function sair() {
+    const confirmar = window.confirm(
+      "Deseja realmente sair do sistema?"
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      alert(
+        "Não foi possível sair do sistema. Tente novamente."
+      );
+
+      console.error("Erro ao sair:", error);
+
+      return;
+    }
+
+    window.location.reload();
+  }
+
   return (
-
     <aside className="sidebar">
-
 
       <div className="logo">
 
@@ -28,10 +53,7 @@ export default function Sidebar({ pagina, setPagina }) {
 
       </div>
 
-
-
       <nav>
-
 
         <button
           className={
@@ -43,14 +65,10 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("dashboard")
           }
         >
-
           <FaHome />
 
           Dashboard
-
         </button>
-
-
 
 
         <button
@@ -63,14 +81,10 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("contratos")
           }
         >
-
           <FaFileContract />
 
           Contratos
-
         </button>
-
-
 
 
         <button
@@ -83,14 +97,10 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("frentes")
           }
         >
-
           <FaHardHat />
 
           Frentes de Obra
-
         </button>
-
-
 
 
         <button
@@ -103,14 +113,10 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("medicoes")
           }
         >
-
           <FaCalendarAlt />
 
           Medições
-
         </button>
-
-
 
 
         <button
@@ -123,14 +129,10 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("relatorios")
           }
         >
-
           <FaCamera />
 
           Relatórios
-
         </button>
-
-
 
 
         <button
@@ -143,14 +145,26 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("backup")
           }
         >
-
           <FaDatabase />
 
           Backup
-
         </button>
 
 
+        <button
+          className={
+            pagina === "usuarios"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setPagina("usuarios")
+          }
+        >
+          <FaUsers />
+
+          Usuários
+        </button>
 
 
         <button
@@ -163,19 +177,24 @@ export default function Sidebar({ pagina, setPagina }) {
             setPagina("configuracoes")
           }
         >
-
           <FaCog />
 
           Configurações
-
         </button>
 
 
+        <button
+          type="button"
+          className="sidebar-sair"
+          onClick={sair}
+        >
+          <FaSignOutAlt />
+
+          Sair
+        </button>
+
       </nav>
 
-
     </aside>
-
   );
-
 }

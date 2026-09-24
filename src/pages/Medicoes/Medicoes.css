@@ -1,0 +1,190 @@
+.medicoes-page {
+  padding: 30px;
+}
+
+.medicoes-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.medicoes-topo h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.medicoes-topo p {
+  margin-top: 6px;
+  color: #64748b;
+}
+
+.nova-medicao-btn {
+  background: #1b6ef3;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.nova-medicao-btn:hover {
+  background: #1557c0;
+}
+
+.medicoes-tabela-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.medicoes-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.medicoes-tabela th {
+  background: #f3f4f6;
+  text-align: left;
+  padding: 14px;
+  font-weight: 600;
+}
+
+.medicoes-tabela td {
+  padding: 14px;
+  border-top: 1px solid #eee;
+}
+
+.medicoes-vazio {
+  text-align: center;
+  color: #64748b;
+  padding: 30px !important;
+}
+
+.medicoes-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.medicoes-acoes button {
+  border: none;
+  background: #e2e8f0;
+  color: #0f172a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.medicoes-acoes button:hover {
+  background: #cbd5e1;
+}
+
+.medicoes-acoes button:last-child {
+  background: #ef4444;
+  color: white;
+}
+
+.medicoes-acoes button:last-child:hover {
+  background: #dc2626;
+}
+
+.form-medicao {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.campo-medicao {
+  display: flex;
+  flex-direction: column;
+}
+
+.campo-medicao label {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.campo-medicao input,
+.campo-medicao select,
+.campo-medicao textarea {
+  padding: 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.campo-medicao textarea {
+  resize: vertical;
+}
+
+.linha-medicao {
+  display: flex;
+  gap: 15px;
+}
+
+.linha-medicao .campo-medicao {
+  flex: 1;
+}
+
+.botoes-medicao {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.botoes-medicao button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.cancelar-medicao {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.cancelar-medicao:hover {
+  background: #cbd5e1;
+}
+
+.salvar-medicao {
+  background: #1b6ef3;
+  color: white;
+}
+
+.salvar-medicao:hover {
+  background: #1557c0;
+}
+
+.salvar-medicao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .medicoes-page {
+    padding: 20px;
+  }
+
+  .medicoes-topo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .linha-medicao {
+    flex-direction: column;
+  }
+
+  .medicoes-tabela {
+    min-width: 800px;
+  }
+}
