@@ -93,6 +93,17 @@
   font-size: 14px;
 }
 
+/* ============================================================
+   FILTROS
+============================================================ */
+
+.frentes-filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .frentes-filtro {
   display: flex;
   align-items: center;
@@ -112,6 +123,10 @@
   font-size: 14px;
 }
 
+/* ============================================================
+   GRID / CARD
+============================================================ */
+
 .frentes-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -128,11 +143,19 @@
   gap: 20px;
   flex-wrap: wrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+  border: 1px solid transparent;
 }
 
+/* Obra arquivada */
 .frente-card-arquivada {
   opacity: .78;
   background: #f8fafc;
+}
+
+/* Obra finalizada */
+.frente-card-finalizada {
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .frente-info {
@@ -149,6 +172,46 @@
   margin: 5px 0 0 0;
   font-size: 18px;
 }
+
+/* ============================================================
+   CABEÇALHO DA FRENTE
+============================================================ */
+
+.frente-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   BADGES DE SITUAÇÃO
+============================================================ */
+
+.frente-badge-andamento,
+.frente-badge-finalizada {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.frente-badge-andamento {
+  background: #dcfce7;
+  color: #166534 !important;
+}
+
+.frente-badge-finalizada {
+  background: #e2e8f0;
+  color: #475569 !important;
+}
+
+/* ============================================================
+   AÇÕES
+============================================================ */
 
 .frente-acoes {
   display: flex;
@@ -175,6 +238,36 @@
   cursor: not-allowed;
 }
 
+/* ============================================================
+   FINALIZAR OBRA
+============================================================ */
+
+.frente-acoes .frente-finalizar {
+  background: #2563eb;
+  color: white;
+}
+
+.frente-acoes .frente-finalizar:hover {
+  background: #1d4ed8;
+}
+
+/* ============================================================
+   REABRIR OBRA
+============================================================ */
+
+.frente-acoes .frente-reabrir {
+  background: #16a34a;
+  color: white;
+}
+
+.frente-acoes .frente-reabrir:hover {
+  background: #15803d;
+}
+
+/* ============================================================
+   ARQUIVAR / REATIVAR
+============================================================ */
+
 .frente-acoes .frente-arquivar {
   background: #f59e0b;
   color: white;
@@ -193,6 +286,15 @@
   background: #15803d;
 }
 
+/* ============================================================
+   EXCLUIR
+============================================================ */
+
+/*
+   Mantém a regra existente:
+   o penúltimo botão da estrutura atual é Excluir.
+*/
+
 .frente-acoes button:nth-last-child(2) {
   background: #ef4444;
   color: white;
@@ -201,6 +303,10 @@
 .frente-acoes button:nth-last-child(2):hover {
   background: #dc2626;
 }
+
+/* ============================================================
+   TRANSFERÊNCIA
+============================================================ */
 
 .frente-transferencia {
   width: 100%;
@@ -247,6 +353,10 @@
   background: #1e293b;
 }
 
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+
 @media (max-width: 768px) {
   .frentes-page {
     padding: 20px;
@@ -255,6 +365,21 @@
   .frentes-lista-topo {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .frentes-filtros {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .frentes-filtro {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .frentes-filtro select {
+    min-width: 160px;
   }
 
   .frentes-cadastro form {
@@ -267,5 +392,9 @@
 
   .frente-acoes {
     width: 100%;
+  }
+
+  .frente-cabecalho {
+    align-items: flex-start;
   }
 }

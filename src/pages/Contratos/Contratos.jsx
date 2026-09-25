@@ -7,7 +7,7 @@ import ContratoForm from "../../components/ContratoForm/ContratoForm";
 
 import { supabase } from "../../services/supabase";
 
-export default function Contratos() {
+export default function Contratos({ abrirContrato }) {
   const [modalAberto, setModalAberto] = useState(false);
 
   const [contratos, setContratos] = useState([]);
@@ -467,12 +467,35 @@ export default function Contratos() {
 
                       <div className="acoes-contrato">
 
+                        {/* =================================
+                            ABRIR CONTRATO
+                        ================================= */}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (abrirContrato) {
+                              abrirContrato(item);
+                            }
+                          }}
+                        >
+                          Abrir
+                        </button>
+
+                        {/* =================================
+                            EDITAR
+                        ================================= */}
+
                         <button
                           type="button"
                           onClick={() => editarContrato(item)}
                         >
                           Editar
                         </button>
+
+                        {/* =================================
+                            INATIVAR / REATIVAR
+                        ================================= */}
 
                         {status === "ativo" ? (
 
@@ -502,6 +525,10 @@ export default function Contratos() {
                           </button>
 
                         )}
+
+                        {/* =================================
+                            EXCLUIR
+                        ================================= */}
 
                         <button
                           type="button"
