@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Contratos from "./pages/Contratos/Contratos";
 import Frentes from "./pages/Frentes/Frentes";
 import Medicoes from "./pages/Medicoes/Medicoes";
+import Fotos from "./pages/Fotos/Fotos";
 import Usuarios from "./pages/Usuarios/Usuarios";
 import Login from "./pages/Login/Login";
 
@@ -96,7 +97,7 @@ function App() {
   }
 
   // =====================================================
-  // FECHAR OBRA / VOLTAR PARA O CONTRATO
+  // FECHAR OBRA / VOLTAR PARA OBRAS
   // =====================================================
 
   function fecharFrente() {
@@ -160,9 +161,9 @@ function App() {
 
     return (
       <div style={{ padding: "30px" }}>
-        {/* ===================================================
+        {/* =================================================
             CABEÇALHO
-        =================================================== */}
+        ================================================= */}
 
         <div
           style={{
@@ -201,9 +202,9 @@ function App() {
           </p>
         </div>
 
-        {/* ===================================================
+        {/* =================================================
             ÁREAS DA OBRA
-        =================================================== */}
+        ================================================= */}
 
         <div
           style={{
@@ -258,11 +259,7 @@ function App() {
 
           <button
             type="button"
-            onClick={() => {
-              alert(
-                "A área de Fotos será conectada à estrutura do Google Drive nesta etapa."
-              );
-            }}
+            onClick={() => setPagina("fotos")}
             style={{
               padding: "30px",
               textAlign: "left",
@@ -296,6 +293,40 @@ function App() {
   }
 
   // =====================================================
+  // PÁGINA DE FOTOS DA OBRA
+  // =====================================================
+
+  function renderFotos() {
+    if (!contratoSelecionado || !frenteSelecionada) {
+      return (
+        <div style={{ padding: "30px" }}>
+          <h1>Nenhuma obra selecionada</h1>
+
+          <button
+            type="button"
+            onClick={() => setPagina("frentes")}
+            style={{
+              marginTop: "20px",
+              padding: "10px 16px",
+              cursor: "pointer",
+            }}
+          >
+            ← Voltar para obras
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <Fotos
+        contratoSelecionado={contratoSelecionado}
+        frenteSelecionada={frenteSelecionada}
+        voltarObra={() => setPagina("frente")}
+      />
+    );
+  }
+
+  // =====================================================
   // PÁGINA DO CONTRATO
   // =====================================================
 
@@ -322,9 +353,9 @@ function App() {
 
     return (
       <div style={{ padding: "30px" }}>
-        {/* ===================================================
+        {/* =================================================
             CABEÇALHO DO CONTRATO
-        =================================================== */}
+        ================================================= */}
 
         <div
           style={{
@@ -336,19 +367,11 @@ function App() {
           }}
         >
           <div>
-            <h1
-              style={{
-                marginBottom: "8px",
-              }}
-            >
+            <h1 style={{ marginBottom: "8px" }}>
               Contrato {contratoSelecionado.numero}
             </h1>
 
-            <p
-              style={{
-                margin: 0,
-              }}
-            >
+            <p style={{ margin: 0 }}>
               {contratoSelecionado.nome}
             </p>
 
@@ -378,9 +401,9 @@ function App() {
           </button>
         </div>
 
-        {/* ===================================================
+        {/* =================================================
             ÁREAS DO CONTRATO
-        =================================================== */}
+        ================================================= */}
 
         <div
           style={{
@@ -418,11 +441,7 @@ function App() {
               🏗️ Obras em andamento
             </strong>
 
-            <span
-              style={{
-                color: "#64748b",
-              }}
-            >
+            <span style={{ color: "#64748b" }}>
               Acessar as obras deste contrato.
             </span>
           </button>
@@ -457,11 +476,7 @@ function App() {
               ✅ Obras finalizadas
             </strong>
 
-            <span
-              style={{
-                color: "#64748b",
-              }}
-            >
+            <span style={{ color: "#64748b" }}>
               Visualizar as obras já concluídas.
             </span>
           </button>
@@ -494,13 +509,9 @@ function App() {
               📷 Relatórios fotográficos
             </strong>
 
-            <span
-              style={{
-                color: "#64748b",
-              }}
-            >
-              Acessar as medições e relatórios fotográficos
-              deste contrato.
+            <span style={{ color: "#64748b" }}>
+              Acessar as medições e relatórios
+              fotográficos deste contrato.
             </span>
           </button>
         </div>
@@ -581,9 +592,7 @@ function App() {
         ================================================= */}
 
         <Medicoes
-          contratoSelecionado={
-            contratoSelecionado
-          }
+          contratoSelecionado={contratoSelecionado}
           voltarContrato={() =>
             setPagina("contrato")
           }
@@ -640,6 +649,9 @@ function App() {
 
       case "frente":
         return renderFrente();
+
+      case "fotos":
+        return renderFotos();
 
       case "relatorios":
         return renderRelatorios();

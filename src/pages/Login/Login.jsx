@@ -23,7 +23,10 @@ export default function Login() {
     });
 
     if (error) {
-      setErro("E-mail ou senha incorretos.");
+      console.error("ERRO SUPABASE LOGIN:", error);
+
+      setErro(`Erro: ${error.message}`);
+
       setCarregando(false);
       return;
     }
@@ -38,7 +41,9 @@ export default function Login() {
     const emailInformado = email.trim();
 
     if (!emailInformado) {
-      setErro("Digite seu e-mail antes de solicitar a redefinição da senha.");
+      setErro(
+        "Digite seu e-mail antes de solicitar a redefinição da senha."
+      );
       return;
     }
 
@@ -52,19 +57,16 @@ export default function Login() {
     );
 
     if (error) {
-  console.error("ERRO SUPABASE RECUPERAÇÃO:", error);
+      console.error(
+        "ERRO SUPABASE RECUPERAÇÃO:",
+        error
+      );
 
-  setErro(`Erro: ${error.message}`);
+      setErro(`Erro: ${error.message}`);
 
-  setRecuperando(false);
-  return;
-}
-      
-        
-      
-      
-      
-    
+      setRecuperando(false);
+      return;
+    }
 
     setMensagem(
       "E-mail de recuperação enviado. Verifique sua caixa de entrada."
@@ -94,7 +96,9 @@ export default function Login() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
             placeholder="seu@email.com"
             autoComplete="email"
             required
@@ -105,7 +109,9 @@ export default function Login() {
           <input
             type="password"
             value={senha}
-            onChange={(e) => setSenha(e.target.value)}
+            onChange={(e) =>
+              setSenha(e.target.value)
+            }
             placeholder="Digite sua senha"
             autoComplete="current-password"
             required
@@ -125,16 +131,22 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={carregando || recuperando}
+            disabled={
+              carregando || recuperando
+            }
           >
-            {carregando ? "Entrando..." : "Entrar"}
+            {carregando
+              ? "Entrando..."
+              : "Entrar"}
           </button>
 
           <button
             type="button"
             className="login-esqueci"
             onClick={esqueciSenha}
-            disabled={carregando || recuperando}
+            disabled={
+              carregando || recuperando
+            }
           >
             {recuperando
               ? "Enviando..."
