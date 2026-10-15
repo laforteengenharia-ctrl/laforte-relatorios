@@ -23,6 +23,7 @@ export default function Frentes({
   const [filtroSituacao, setFiltroSituacao] = useState("todas");
 
   const [nome, setNome] = useState("");
+  const [drivePastaId, setDrivePastaId] = useState("");
   const [editandoId, setEditandoId] = useState(null);
 
   const [transferindoId, setTransferindoId] = useState(null);
@@ -116,6 +117,7 @@ export default function Frentes({
 
     setEditandoId(null);
     setNome("");
+    setDrivePastaId("");
     setTransferindoId(null);
     setNovoContratoId("");
   }, [contratoSelecionado]);
@@ -261,6 +263,20 @@ export default function Frentes({
       return;
     }
 
+    const valorPastaDrive = drivePastaId.trim();
+    const idEncontrado = valorPastaDrive.match(/\/folders\/([\w-]+)/i);
+    const pastaFotosId = idEncontrado?.[1] || valorPastaDrive;
+
+    if (!pastaFotosId) {
+      alert("Informe o link ou o ID da pasta Fotos desta frente no Google Drive.");
+      return;
+    }
+
+    if (/^https?:\/\//i.test(valorPastaDrive) && !idEncontrado) {
+      alert("O link informado não parece ser de uma pasta do Google Drive. Copie o link da pasta Fotos.");
+      return;
+    }
+
     setSalvando(true);
 
     try {
@@ -269,6 +285,7 @@ export default function Frentes({
           .from("frentes")
           .update({
             nome: nome.trim(),
+            drive_pasta_id: pastaFotosId,
           })
           .eq("id", editandoId);
 
@@ -297,6 +314,7 @@ export default function Frentes({
             {
               contrato_id: Number(contratoSelecionado),
               nome: nome.trim(),
+              drive_pasta_id: pastaFotosId,
               ordem: novaOrdem,
               status: "ativo",
               situacao: "em_andamento",
@@ -315,6 +333,7 @@ export default function Frentes({
       }
 
       setNome("");
+      setDrivePastaId("");
       setEditandoId(null);
 
       await carregarFrentes(contratoSelecionado);
@@ -331,6 +350,7 @@ export default function Frentes({
 
     setEditandoId(frente.id);
     setNome(frente.nome || "");
+    setDrivePastaId(frente.drive_pasta_id || "");
     setTransferindoId(null);
     setNovoContratoId("");
   }
@@ -338,6 +358,7 @@ export default function Frentes({
   function cancelarEdicao() {
     setEditandoId(null);
     setNome("");
+    setDrivePastaId("");
   }
 
   // ============================================================
@@ -1230,6 +1251,30 @@ export default function Frentes({
               }
               disabled={salvando}
             />
+
+            <label
+              className="frente-pasta-drive-campo"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                width: "100%",
+              }}
+            >
+              <span>Pasta Fotos desta frente no Google Drive</span>
+              <input
+                type="text"
+                placeholder="Cole o link da pasta Fotos ou somente o ID"
+                value={drivePastaId}
+                onChange={(e) => setDrivePastaId(e.target.value)}
+                disabled={salvando}
+                required
+                style={{ width: "100%" }}
+              />
+              <small style={{ color: "#64748b", fontSize: "0.85rem" }}>
+                A pasta precisa conter as subpastas das medições, por exemplo: Medição 08.
+              </small>
+            </label>
 
             <button
               type="submit"

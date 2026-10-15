@@ -7,6 +7,30 @@ import {
 const GOOGLE_DRIVE_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbykcDwsViBK50fZmdSBW1_f9_K7Blz5TPuZICdvLO-LUFsMxG6-5A94A4f1yqe1QufB5Q/exec";
 
+async function buscarImagemDrive(arquivoId, drivePastaId, numeroMedicao, tamanho) {
+  const parametros = new URLSearchParams({
+    acao: "imagem",
+    arquivo_id: String(arquivoId || ""),
+    drive_pasta_id: String(drivePastaId || ""),
+    medicao: String(numeroMedicao || ""),
+    tamanho,
+  });
+  const resposta = await fetch(
+    `${GOOGLE_DRIVE_SCRIPT_URL}?${parametros.toString()}`
+  );
+
+  if (!resposta.ok) {
+    throw new Error(`HTTP ${resposta.status}`);
+  }
+
+  const dados = await resposta.json();
+  if (!dados.ok || !dados.base64) {
+    throw new Error(dados.erro || "Imagem não disponível.");
+  }
+
+  return `data:${dados.tipo || "image/jpeg"};base64,${dados.base64}`;
+}
+
 // ============================================================
 // COMPONENTE DE FOTO
 // ============================================================
@@ -14,6 +38,8 @@ const GOOGLE_DRIVE_SCRIPT_URL =
 function FotoDrive({
   arquivo,
   onAbrir,
+  drivePastaId,
+  numeroMedicao,
 }) {
   const elementoRef = useRef(null);
 
@@ -64,39 +90,16 @@ function FotoDrive({
         setCarregando(true);
         setErro(false);
 
-        const url =
-          `${GOOGLE_DRIVE_SCRIPT_URL}` +
-          `?acao=imagem` +
-          `&arquivo_id=${encodeURIComponent(
-            arquivo.id
-          )}`;
-
-        const resposta = await fetch(url);
-
-        if (!resposta.ok) {
-          throw new Error(
-            `HTTP ${resposta.status}`
-          );
-        }
-
-        const dados = await resposta.json();
-
-        if (
-          !dados.ok ||
-          !dados.base64
-        ) {
-          throw new Error(
-            dados.erro ||
-              "Imagem não disponível."
-          );
-        }
+        const urlImagem = await buscarImagemDrive(
+          arquivo.id,
+          drivePastaId,
+          numeroMedicao,
+          "miniatura"
+        );
 
         if (cancelado) {
           return;
         }
-
-        const urlImagem =
-          `data:${dados.tipo};base64,${dados.base64}`;
 
         setImagem(urlImagem);
       } catch (error) {
@@ -115,20 +118,44 @@ function FotoDrive({
         }
       }
     }
-  }, [arquivo.id]);
+  }, [arquivo.id, drivePastaId, numeroMedicao]);
+
+  async function abrirImagemAmpliada() {
+    if (!imagem) return;
+
+    onAbrir({
+      ...arquivo,
+      url: imagem,
+      _carregandoOriginal: true,
+    });
+
+    try {
+      const original = await buscarImagemDrive(
+        arquivo.id,
+        drivePastaId,
+        numeroMedicao,
+        "original"
+      );
+      onAbrir((atual) =>
+        atual?.id === arquivo.id
+          ? { ...atual, url: original, _carregandoOriginal: false }
+          : atual
+      );
+    } catch (error) {
+      console.warn("Não foi possível carregar a foto original; mantendo a miniatura.", error);
+      onAbrir((atual) =>
+        atual?.id === arquivo.id
+          ? { ...atual, _carregandoOriginal: false }
+          : atual
+      );
+    }
+  }
 
   return (
     <button
       ref={elementoRef}
       type="button"
-      onClick={() => {
-        if (imagem) {
-          onAbrir({
-            ...arquivo,
-            url: imagem,
-          });
-        }
-      }}
+      onClick={abrirImagemAmpliada}
       title={arquivo.nome}
       style={{
         padding: 0,
@@ -1138,6 +1165,12 @@ export default function Fotos({
                           onAbrir={
                             setFotoAmpliada
                           }
+                          drivePastaId={
+                            frenteSelecionada.drive_pasta_id
+                          }
+                          numeroMedicao={
+                            medicaoSelecionada.numero
+                          }
                         />
                       )
                     )}
@@ -1346,6 +1379,22 @@ export default function Fotos({
                 "default",
             }}
           />
+          {fotoAmpliada._carregandoOriginal && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "24px",
+                left: 0,
+                right: 0,
+                color: "#fff",
+                textAlign: "center",
+                fontSize: "14px",
+                pointerEvents: "none",
+              }}
+            >
+              Carregando foto em alta resolução…
+            </div>
+          )}
         </div>
       )}
     </div>
