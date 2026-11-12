@@ -227,7 +227,8 @@ export default function Medicoes({ contratoSelecionado: contratoSelecionadoProp 
     setFrentes([]);
     setFrentesSelecionadas([]);
     if (contratoIdContexto) await carregarFrentesDoContrato(contratoIdContexto);
-    setModalAberto(true);
+    setModalAberto(true);
+
   }
 
   // =====================================================
@@ -1592,7 +1593,6 @@ export default function Medicoes({ contratoSelecionado: contratoSelecionadoProp 
       <div className="medicoes-topo">
         <div>
           <h1>Medições</h1>
-          <p>Gerencie as medições dos contratos.</p>
         </div>
 
         <button className="nova-medicao-btn" onClick={novaMedicao}>

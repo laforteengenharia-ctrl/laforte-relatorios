@@ -171,6 +171,7 @@
 
 @media (max-width: 768px) {
   .medicoes-page {
+  padding: 0 30px 30px;
     padding: 20px;
   }
 
@@ -188,3 +189,91 @@
     min-width: 800px;
   }
 }
+
+/* Tipografia e acabamento consistentes na página de medições */
+.medicoes-page {
+  padding: 0 30px 30px;
+  color: #111;
+  font-family: inherit;
+  text-align: left;
+}
+.medicoes-page h1,
+.medicoes-page p,
+.medicoes-page th,
+.medicoes-page td,
+.medicoes-page button,
+.medicoes-page input,
+.medicoes-page select,
+.medicoes-page textarea {
+  font-family: inherit;
+}
+.medicoes-topo { align-items: center; gap: 18px; margin-bottom: 22px; }
+.medicoes-topo h1 { margin: 0; color: #111; font-size: 30px; line-height: 1.25; }
+.medicoes-topo p { display: none; }
+.nova-medicao-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  color: #fff;
+  background: #176b76;
+  border: 1px solid #176b76;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.nova-medicao-btn:hover { background: #135963; }
+.medicoes-tabela-container {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e0e6ec;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(24, 43, 63, .045);
+}
+.medicoes-tabela { min-width: 850px; border-collapse: separate; border-spacing: 0; }
+.medicoes-tabela th {
+  padding: 14px 16px;
+  color: #111;
+  background: #f3f5f7;
+  border-bottom: 1px solid #e0e6ec;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.medicoes-tabela td {
+  padding: 13px 16px;
+  color: #111;
+  border-top: 0;
+  border-bottom: 1px solid #edf0f3;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.medicoes-tabela tbody tr:last-child td { border-bottom: 0; }
+.medicoes-tabela tbody tr:hover { background: #fafbfc; }
+.medicoes-acoes { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.medicoes-acoes button {
+  min-height: 38px;
+  padding: 8px 12px;
+  color: #111;
+  background: #edf0f3;
+  border: 1px solid #d6dde4;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.medicoes-acoes button:hover { background: #e3e8ed; }
+.medicoes-acoes button:last-child { color: #111; background: #edf0f3; border-color: #d6dde4; }
+.medicoes-acoes button:last-child:hover { color: #111; background: #e3e8ed; }
+.medicoes-vazio { color: #111; }
+@media (max-width: 768px) {
+  .medicoes-page {
+  padding: 0 30px 30px; padding: 20px 14px; }
+  .medicoes-topo { align-items: flex-start; }
+}
+
+.medicoes-tabela td:nth-child(4), .medicoes-tabela td:nth-child(5) { white-space: nowrap; }

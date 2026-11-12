@@ -1,5 +1,15 @@
-.contratos-page{
-    padding:30px;
+.contratos-page {
+  width: 100%;
+  padding: 30px;
+  color: #243447;
+  font-family: inherit;
+  text-align: left;
+}
+
+.contratos-page button,
+.contratos-page input,
+.contratos-page select {
+  font-family: inherit;
 }
 
 .topo{
@@ -9,8 +19,12 @@
     margin-bottom:25px;
 }
 
-.topo h1{
-    margin:0;
+.contratos-page .topo h1 {
+  margin: 0;
+  color: #172536;
+  font-size: 38px;
+  line-height: 1.15;
+  letter-spacing: -.025em;
 }
 
 .topo p{
@@ -19,7 +33,7 @@
 }
 
 .novo-btn{
-    background:#1b6ef3;
+    background:#176b76;
     color:white;
     border:none;
     padding:12px 20px;
@@ -28,8 +42,10 @@
     font-size:15px;
 }
 
+.novo-btn:disabled { opacity: .7; cursor: wait; }
+
 .novo-btn:hover{
-    background:#1557c0;
+    background:#135963;
 }
 
 .pesquisa{
@@ -44,23 +60,134 @@
     border:1px solid #ddd;
 }
 
-.tabela{
-    width:100%;
-    border-collapse:collapse;
-    background:white;
-    border-radius:10px;
-    overflow:hidden;
+.filtros-contratos {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 16px;
+  margin: 8px 0 18px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e2e8ef;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(24, 43, 63, .04);
 }
 
-.tabela th{
-    background:#f3f3f3;
-    text-align:left;
-    padding:14px;
+.filtro-pesquisa,
+.filtro-status {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #536579;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.tabela td{
-    padding:14px;
-    border-top:1px solid #eee;
+.filtro-pesquisa { flex: 1 1 360px; max-width: 460px; }
+.filtro-status { flex: 0 0 190px; }
+
+.filtro-pesquisa input,
+.filtro-status select {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  color: #26384b;
+  background: #fff;
+  border: 1px solid #ccd6e1;
+  border-radius: 8px;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.filtro-pesquisa input::placeholder { color: #8b98a7; }
+.filtro-pesquisa input:focus,
+.filtro-status select:focus {
+  border-color: #348b9b;
+  box-shadow: 0 0 0 3px rgba(52, 139, 155, .13);
+}
+
+@media (max-width: 620px) {
+  .filtros-contratos { align-items: stretch; flex-direction: column; gap: 12px; }
+  .filtro-pesquisa, .filtro-status { flex: 1 1 auto; max-width: none; }
+}
+
+.tabela-container {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e2e8ef;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(24, 43, 63, .04);
+}
+
+.tabela {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+}
+
+.tabela th {
+  padding: 15px 14px;
+  color: #526579;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4eaf0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.tabela td {
+  padding: 13px 14px;
+  color: #34475a;
+  border-bottom: 1px solid #edf1f5;
+  text-align: center;
+  font-size: 14px;
+}
+
+.tabela tbody tr:last-child td { border-bottom: 0; }
+.tabela tbody tr:hover { background: #f8fafc; }
+.tabela td:nth-child(2),
+.tabela td:nth-child(3) { text-align: left; }
+.tabela th:last-child { min-width: 270px; }
+
+.acoes-contrato {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.acoes-contrato .acao-btn {
+  min-height: 34px;
+  padding: 7px 11px;
+  color: #40566b;
+  background: #fff;
+  border: 1px solid #d6e0e9;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.acoes-contrato .acao-btn:hover { background: #f1f6f9; border-color: #aebfce; }
+.acoes-contrato .acao-abrir { color: #176b76; background: #eef8f8; border-color: #c9e7e9; }
+.acoes-contrato .acao-abrir:hover { background: #e2f2f3; border-color: #9dd2d7; }
+.acoes-contrato .acao-excluir { color: #a64c4c; background: #fff; border-color: #e8d6d6; }
+.acoes-contrato .acao-excluir:hover { background: #fbf1f1; border-color: #d9b6b6; }
+
+@media (max-width: 700px) {
+  .contratos-page { padding: 20px 14px; }
+  .contratos-page .topo { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .contratos-page .topo h1 { font-size: 32px; }
+  .contratos-page .topo > div:last-child { width: 100%; }
 }
 
 .vazio{
@@ -115,10 +242,10 @@
 }
 
 .salvar{
-    background:#1b6ef3;
+    background:#176b76;
     color:white;
 }
 
 .salvar:hover{
-    background:#1557c0;
+    background:#135963;
 }

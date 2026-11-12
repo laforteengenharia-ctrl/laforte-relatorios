@@ -93,8 +93,16 @@ export default function Contratos({ abrirContrato }) {
       return;
     }
 
-    setContratos(data || []);
-    setContratosFiltrados(data || []);
+    const contratosOrdenados = [...(data || [])].sort((a, b) =>
+      String(a.numero || "").localeCompare(
+        String(b.numero || ""),
+        "pt-BR",
+        { numeric: true, sensitivity: "base" }
+      )
+    );
+
+    setContratos(contratosOrdenados);
+    setContratosFiltrados(contratosOrdenados);
 
     setCarregando(false);
   }
@@ -360,9 +368,6 @@ export default function Contratos({ abrirContrato }) {
         <div>
           <h1>Contratos</h1>
 
-          <p>
-            Gerencie todos os contratos cadastrados.
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -373,24 +378,30 @@ export default function Contratos({ abrirContrato }) {
       </div>
 
       <div className="filtros-contratos">
+        <label className="filtro-pesquisa" htmlFor="pesquisar-contrato">
+          <span>Pesquisar contratos</span>
+          <input
+            id="pesquisar-contrato"
+            type="search"
+            placeholder="Nº, obra, cliente ou cidade"
+            value={pesquisa}
+            onChange={(e) => setPesquisa(e.target.value)}
+          />
+        </label>
 
-        <input
-          type="text"
-          placeholder="Pesquisar contrato..."
-          value={pesquisa}
-          onChange={(e) => setPesquisa(e.target.value)}
-        />
-
-        <select
-          value={filtroStatus}
-          onChange={(e) => setFiltroStatus(e.target.value)}
-        >
-          <option value="ativo">Ativos</option>
-          <option value="encerrado">Encerrados</option>
-          <option value="suspenso">Suspensos</option>
-          <option value="todos">Todos</option>
-        </select>
-
+        <label className="filtro-status" htmlFor="filtro-status-contrato">
+          <span>Status</span>
+          <select
+            id="filtro-status-contrato"
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value)}
+          >
+            <option value="ativo">Ativos</option>
+            <option value="encerrado">Encerrados</option>
+            <option value="suspenso">Suspensos</option>
+            <option value="todos">Todos</option>
+          </select>
+        </label>
       </div>
 
       <div className="tabela-container">
@@ -472,6 +483,7 @@ export default function Contratos({ abrirContrato }) {
 
                         <button
                           type="button"
+                          className="acao-btn acao-abrir"
                           onClick={() => {
                             if (abrirContrato) {
                               abrirContrato(item);
@@ -487,6 +499,7 @@ export default function Contratos({ abrirContrato }) {
 
                         <button
                           type="button"
+                          className="acao-btn"
                           onClick={() => editarContrato(item)}
                         >
                           Editar
@@ -500,6 +513,7 @@ export default function Contratos({ abrirContrato }) {
 
                           <button
                             type="button"
+                            className="acao-btn"
                             onClick={() => alterarStatusContrato(item)}
                           >
                             Inativar
@@ -509,6 +523,7 @@ export default function Contratos({ abrirContrato }) {
 
                           <button
                             type="button"
+                            className="acao-btn"
                             onClick={() => alterarStatusContrato(item)}
                           >
                             Reativar
@@ -518,6 +533,7 @@ export default function Contratos({ abrirContrato }) {
 
                           <button
                             type="button"
+                            className="acao-btn"
                             onClick={() => alterarStatusContrato(item)}
                           >
                             Ativar
@@ -531,6 +547,7 @@ export default function Contratos({ abrirContrato }) {
 
                         <button
                           type="button"
+                          className="acao-btn acao-excluir"
                           onClick={() => excluirContrato(item.id)}
                         >
                           Excluir

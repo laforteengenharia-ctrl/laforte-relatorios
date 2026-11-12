@@ -13,6 +13,7 @@ const Medicoes = lazy(() => import("./pages/Medicoes/Medicoes"));
 const Fotos = lazy(() => import("./pages/Fotos/Fotos"));
 const Usuarios = lazy(() => import("./pages/Usuarios/Usuarios"));
 const Login = lazy(() => import("./pages/Login/Login"));
+const Backup = lazy(() => import("./pages/Backup/Backup"));
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -352,169 +353,38 @@ function App() {
     }
 
     return (
-      <div style={{ padding: "30px" }}>
-        {/* =================================================
-            CABEÇALHO DO CONTRATO
-        ================================================= */}
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "20px",
-            marginBottom: "30px",
-          }}
-        >
-          <div>
-            <h1 style={{ marginBottom: "8px" }}>
-              Contrato {contratoSelecionado.numero}
-            </h1>
-
-            <p style={{ margin: 0 }}>
-              {contratoSelecionado.nome}
-            </p>
-
-            <p
-              style={{
-                marginTop: "6px",
-                color: "#64748b",
-              }}
-            >
+      <div className="contrato-detalhe">
+        <header className="contrato-cabecalho">
+          <div className="contrato-identificacao">
+            <h1>Contrato {contratoSelecionado.numero}</h1>
+            <p className="contrato-obra">{contratoSelecionado.nome}</p>
+            <p className="contrato-cliente">
               Cliente: {contratoSelecionado.cliente}
-
               {contratoSelecionado.cidade
                 ? ` — ${contratoSelecionado.cidade}/${contratoSelecionado.uf || "SC"}`
                 : ""}
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={fecharContrato}
-            style={{
-              padding: "10px 16px",
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" className="contrato-voltar" onClick={fecharContrato}>
             ← Voltar para contratos
           </button>
-        </div>
+        </header>
 
-        {/* =================================================
-            ÁREAS DO CONTRATO
-        ================================================= */}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-          }}
-        >
-          {/* =================================================
-              OBRAS EM ANDAMENTO
-          ================================================= */}
-
-          <button
-            type="button"
-            onClick={() =>
-              abrirAreaContrato("frentes")
-            }
-            style={{
-              padding: "30px",
-              textAlign: "left",
-              cursor: "pointer",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              background: "#fff",
-            }}
-          >
-            <strong
-              style={{
-                display: "block",
-                fontSize: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              🏗️ Obras em andamento
-            </strong>
-
-            <span style={{ color: "#64748b" }}>
-              Acessar as obras deste contrato.
-            </span>
+        <nav className="areas-contrato" aria-label="Áreas do contrato">
+          <button type="button" className="area-contrato" onClick={() => abrirAreaContrato("frentes")}>
+            <span className="area-contrato-icone" aria-hidden="true">🏗️</span>
+            <strong>Obras em andamento</strong>
           </button>
-
-          {/* =================================================
-              OBRAS FINALIZADAS
-          ================================================= */}
-
-          <button
-            type="button"
-            onClick={() =>
-              abrirAreaContrato(
-                "frentes_finalizadas"
-              )
-            }
-            style={{
-              padding: "30px",
-              textAlign: "left",
-              cursor: "pointer",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              background: "#fff",
-            }}
-          >
-            <strong
-              style={{
-                display: "block",
-                fontSize: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              ✅ Obras finalizadas
-            </strong>
-
-            <span style={{ color: "#64748b" }}>
-              Visualizar as obras já concluídas.
-            </span>
+          <button type="button" className="area-contrato" onClick={() => abrirAreaContrato("frentes_finalizadas")}>
+            <span className="area-contrato-icone" aria-hidden="true">✅</span>
+            <strong>Obras finalizadas</strong>
           </button>
-
-          {/* =================================================
-              RELATÓRIOS FOTOGRÁFICOS
-          ================================================= */}
-
-          <button
-            type="button"
-            onClick={() =>
-              abrirAreaContrato("relatorios")
-            }
-            style={{
-              padding: "30px",
-              textAlign: "left",
-              cursor: "pointer",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              background: "#fff",
-            }}
-          >
-            <strong
-              style={{
-                display: "block",
-                fontSize: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              📷 Relatórios fotográficos
-            </strong>
-
-            <span style={{ color: "#64748b" }}>
-              Acessar as medições e relatórios
-              fotográficos deste contrato.
-            </span>
+          <button type="button" className="area-contrato" onClick={() => abrirAreaContrato("relatorios")}>
+            <span className="area-contrato-icone" aria-hidden="true">📷</span>
+            <strong>Relatórios fotográficos</strong>
           </button>
-        </div>
+        </nav>
       </div>
     );
   }
@@ -545,47 +415,22 @@ function App() {
     }
 
     return (
-      <div>
-        {/* =================================================
-            CABEÇALHO
-        ================================================= */}
-
-        <div
-          style={{
-            padding: "30px 30px 0 30px",
-          }}
-        >
+      <div className="relatorios-pagina">
+        <header className="relatorios-cabecalho">
           <button
             type="button"
+            className="relatorios-voltar"
             onClick={() => setPagina("contrato")}
-            style={{
-              padding: "9px 14px",
-              marginBottom: "20px",
-              cursor: "pointer",
-            }}
           >
             ← Voltar para o contrato
           </button>
-
-          <h1
-            style={{
-              marginBottom: "8px",
-            }}
-          >
-            Relatórios fotográficos
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-            }}
-          >
+          <h1>Relatórios fotográficos</h1>
+          <p>
             Contrato {contratoSelecionado.numero}
             {" — "}
             {contratoSelecionado.nome}
           </p>
-        </div>
+        </header>
 
         {/* =================================================
             MEDIÇÕES / RELATÓRIOS
@@ -660,11 +505,7 @@ function App() {
         return <Usuarios />;
 
       case "backup":
-        return (
-          <div style={{ padding: "30px" }}>
-            <h1>Backup</h1>
-          </div>
-        );
+        return <Backup />;
 
       case "configuracoes":
         return (

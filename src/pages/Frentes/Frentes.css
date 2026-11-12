@@ -398,3 +398,149 @@
     align-items: flex-start;
   }
 }
+
+/* Tipografia, cores e espaçamento consistentes na página de frentes */
+.frentes-page {
+  color: #111;
+  font-family: inherit;
+  text-align: left;
+}
+.frentes-page h1,
+.frentes-page h2,
+.frentes-page h3,
+.frentes-page p,
+.frentes-page span,
+.frentes-page label,
+.frentes-page small,
+.frentes-page button,
+.frentes-page input,
+.frentes-page select {
+  font-family: inherit;
+  letter-spacing: normal;
+}
+.frentes-page h1,
+.frentes-page h2,
+.frentes-page h3,
+.frentes-page p,
+.frentes-page label,
+.frentes-page small,
+.frentes-page .frente-info span,
+.frentes-page .frentes-lista-topo p {
+  color: #111;
+}
+.frentes-topo { margin-bottom: 28px; }
+.frentes-topo h1 { margin: 0; font-size: 32px; line-height: 1.2; }
+.frentes-cadastro {
+  padding: 26px;
+  border: 1px solid #e0e6ec;
+  border-radius: 14px;
+  box-shadow: 0 5px 18px rgba(24, 43, 63, .05);
+}
+.frentes-cadastro h2 { margin: 0 0 18px; font-size: 22px; line-height: 1.3; }
+.frentes-cadastro form {
+  display: grid;
+  grid-template-columns: minmax(180px, .9fr) minmax(280px, 1.5fr) 190px;
+  align-items: stretch;
+  gap: 14px;
+}
+.frentes-cadastro input,
+.frentes-cadastro select {
+  min-width: 0;
+  min-height: 46px;
+  padding: 11px 14px;
+  color: #111;
+  border: 1px solid #cbd5df;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.frentes-cadastro input::placeholder { color: #6b7280; opacity: 1; }
+.frente-pasta-drive-campo { color: #111 !important; font-size: 14px; font-weight: 600; }
+.frente-pasta-drive-campo small { color: #111 !important; font-size: 13px !important; line-height: 1.45; }
+.frentes-cadastro button {
+  min-width: 0;
+  min-height: 46px;
+  padding: 11px 16px;
+  color: #111;
+  background: #edf0f3;
+  border: 1px solid #d6dde4;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  word-spacing: .05em;
+}
+.frentes-cadastro button:hover { background: #e3e8ed; }
+.frentes-cadastro button.frente-botao-adicionar {
+  color: #fff;
+  background: #14243a;
+  border-color: #14243a;
+}
+.frentes-cadastro button.frente-botao-adicionar:hover { background: #203650; }
+.frentes-lista-topo { align-items: center; margin: 30px 0 16px; }
+.frentes-lista-topo h2 { font-size: 22px; line-height: 1.3; }
+.frentes-filtro label { color: #111; }
+.frentes-filtro select { color: #111; font-family: inherit; }
+.frente-card {
+  border: 1px solid #e0e6ec;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(24, 43, 63, .045);
+}
+.frente-info h3 { margin-top: 8px; color: #111; font-size: 18px; line-height: 1.35; }
+.frente-info span { color: #111; }
+.frente-badge-andamento,
+.frente-badge-finalizada { color: #111 !important; background: #edf0f3; }
+.frente-acoes { gap: 8px; }
+.frente-acoes button {
+  min-height: 38px;
+  padding: 8px 12px;
+  color: #111;
+  background: #edf0f3;
+  border: 1px solid #d6dde4;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: normal;
+}
+.frente-acoes button:hover { color: #111; background: #e3e8ed; }
+.frente-acoes .frente-finalizar,
+.frente-acoes .frente-reabrir,
+.frente-acoes .frente-arquivar,
+.frente-acoes .frente-reativar,
+.frente-acoes button:nth-last-child(2) {
+  color: #111;
+  background: #edf0f3;
+  border-color: #d6dde4;
+}
+.frente-acoes .frente-finalizar:hover,
+.frente-acoes .frente-reabrir:hover,
+.frente-acoes .frente-arquivar:hover,
+.frente-acoes .frente-reativar:hover,
+.frente-acoes button:nth-last-child(2):hover { color: #111; background: #e3e8ed; }
+.frente-transferencia button,
+.frente-transferencia button:first-of-type { color: #111; background: #edf0f3; border: 1px solid #d6dde4; font-family: inherit; }
+.frente-transferencia button:hover,
+.frente-transferencia button:first-of-type:hover { color: #111; background: #e3e8ed; }
+@media (max-width: 768px) {
+  .frentes-cadastro { padding: 20px; }
+  .frentes-cadastro form { grid-template-columns: 1fr; }
+  .frentes-cadastro button { width: 100%; }
+}
+
+.frentes-voltar {
+  min-height: 40px;
+  margin-bottom: 18px;
+  padding: 8px 14px;
+  color: #111;
+  background: #fff;
+  border: 1px solid #cbd5df;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+.frentes-voltar:hover { background: #edf0f3; }

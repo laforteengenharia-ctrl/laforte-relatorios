@@ -183,7 +183,6 @@ export default function ImportarContratosDrive({ onConcluido }) {
       className="novo-btn"
       onClick={importar}
       disabled={importando}
-      style={{ background: "#0f766e", opacity: importando ? 0.7 : 1 }}
     >
       {importando ? "Importando do Drive..." : "Importar do Google Drive"}
     </button>

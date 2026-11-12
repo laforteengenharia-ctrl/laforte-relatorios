@@ -1163,11 +1163,6 @@ export default function Frentes({
               : "Obras em andamento"}
           </h1>
 
-          <p>
-            {somenteFinalizadas
-              ? "Obras finalizadas deste contrato."
-              : "Obras em andamento deste contrato."}
-          </p>
         </div>
       </div>
 
@@ -1278,6 +1273,7 @@ export default function Frentes({
 
             <button
               type="submit"
+              className={editandoId ? "frente-botao-salvar" : "frente-botao-adicionar"}
               disabled={salvando}
             >
               {salvando
