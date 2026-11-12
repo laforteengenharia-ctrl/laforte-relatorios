@@ -4,6 +4,7 @@ import "./Contratos.css";
 
 import Modal from "../../components/Modal/Modal";
 import ContratoForm from "../../components/ContratoForm/ContratoForm";
+import ImportarContratosDrive from "./ImportarContratosDrive";
 
 import { supabase } from "../../services/supabase";
 
@@ -364,12 +365,10 @@ export default function Contratos({ abrirContrato }) {
           </p>
         </div>
 
-        <button
-          className="novo-btn"
-          onClick={novoContrato}
-        >
-          + Novo Contrato
-        </button>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <ImportarContratosDrive onConcluido={carregarContratos} />
+          <button className="novo-btn" onClick={novoContrato}>+ Novo Contrato</button>
+        </div>
 
       </div>
 

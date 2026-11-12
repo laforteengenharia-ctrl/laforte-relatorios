@@ -20,7 +20,8 @@ const TAMANHO_LOTE_FOTOS = 100;
 // COMPONENTE
 // =====================================================
 
-export default function Medicoes() {
+export default function Medicoes({ contratoSelecionado: contratoSelecionadoProp } = {}) {
+  const contratoIdContexto = Number(contratoSelecionadoProp?.id ?? contratoSelecionadoProp) || null;
   const [medicoes, setMedicoes] = useState([]);
   const [contratos, setContratos] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -64,6 +65,11 @@ export default function Medicoes() {
   const [carregandoSelecao, setCarregandoSelecao] = useState(false);
   const [salvandoSelecao, setSalvandoSelecao] = useState(false);
   const [gerandoRelatorio, setGerandoRelatorio] = useState(false);
+  const [salvandoWord, setSalvandoWord] = useState(false);
+  const [progressoWord, setProgressoWord] = useState("");
+  const [erroWord, setErroWord] = useState("");
+  const [wordAtualizado, setWordAtualizado] = useState(null);
+  const [selecaoFotoAlterada, setSelecaoFotoAlterada] = useState(false);
   const cacheImagensRef = useRef(new Map());
 
   // =====================================================
@@ -93,7 +99,7 @@ export default function Medicoes() {
     setCarregando(true);
 
     try {
-      const { data, error } = await supabase
+      let consulta = supabase
         .from("medicoes")
         .select(`
           *,
@@ -102,8 +108,9 @@ export default function Medicoes() {
             numero,
             nome
           )
-        `)
-        .order("id", { ascending: false });
+        `);
+      if (contratoIdContexto) consulta = consulta.eq("contrato_id", contratoIdContexto);
+      const { data, error } = await consulta.order("id", { ascending: false });
 
       if (error) {
         console.error("Erro ao carregar medições:", error);
@@ -124,7 +131,7 @@ export default function Medicoes() {
   useEffect(() => {
     carregarContratos();
     carregarMedicoes();
-  }, []);
+  }, [contratoIdContexto]);
 
   // =====================================================
   // CARREGAR FRENTES DO CONTRATO
@@ -209,7 +216,7 @@ export default function Medicoes() {
   async function novaMedicao() {
     setMedicao({
       id: null,
-      contrato_id: "",
+      contrato_id: contratoIdContexto || "",
       numero: "",
       data_inicio: "",
       data_fim: "",
@@ -219,7 +226,8 @@ export default function Medicoes() {
 
     setFrentes([]);
     setFrentesSelecionadas([]);
-    setModalAberto(true);
+    if (contratoIdContexto) await carregarFrentesDoContrato(contratoIdContexto);
+    setModalAberto(true);
   }
 
   // =====================================================
@@ -610,6 +618,9 @@ export default function Medicoes() {
     setMedicaoFotosAtual(item);
     setFotosPorFrente({});
     setFotosSelecionadas({});
+    setWordAtualizado(null);
+    setErroWord("");
+    setSelecaoFotoAlterada(false);
     setErroFotos("");
     setFotoAmpliada(null);
     setModalFotosAberto(true);
@@ -676,6 +687,9 @@ export default function Medicoes() {
       });
 
       setFotosPorFrente(novoMapa);
+      if (item.status !== "fechada") {
+        await carregarWordSalvoDoDrive(item, listaFrentes);
+      }
     } catch (error) {
       console.error("Erro ao abrir fotos da medição:", error);
       setErroFotos(
@@ -713,6 +727,7 @@ export default function Medicoes() {
     if (!arquivo?.id) return;
 
     const id = String(arquivo.id);
+    setSelecaoFotoAlterada(true);
 
     setFotosSelecionadas((anterior) => {
       const novo = { ...anterior };
@@ -747,6 +762,7 @@ export default function Medicoes() {
 
   function atualizarLegendaFoto(arquivoId, legenda) {
     const id = String(arquivoId);
+    setSelecaoFotoAlterada(true);
     setFotosSelecionadas((anterior) => {
       if (!anterior[id]) return anterior;
       return {
@@ -761,6 +777,7 @@ export default function Medicoes() {
   // =====================================================
 
   function selecionarTodasFotos() {
+    setSelecaoFotoAlterada(true);
     const novoMapa = { ...fotosSelecionadas };
 
     Object.values(fotosPorFrente).forEach((resultado) => {
@@ -790,6 +807,7 @@ export default function Medicoes() {
   // =====================================================
 
   function desmarcarTodasFotos() {
+    setSelecaoFotoAlterada(true);
     setFotosSelecionadas({});
   }
 
@@ -798,6 +816,7 @@ export default function Medicoes() {
   // =====================================================
 
   function selecionarFotosDaFrente(resultado) {
+    setSelecaoFotoAlterada(true);
     const fotos = resultado.fotos || [];
     const frenteId = Number(resultado.frente.id);
 
@@ -966,9 +985,15 @@ export default function Medicoes() {
         quantidadeSalva += lote.length;
       }
 
-      alert(
-        `${quantidadeSalva} foto(s) selecionada(s) para o relatório.`
-      );
+      setSelecaoFotoAlterada(false);
+      if (medicaoFotosAtual.status === "fechada") {
+        alert(`${quantidadeSalva} foto(s) salvas. Como a medição está fechada, o relatório final existente foi preservado.`);
+      } else {
+        const wordSincronizado = await sincronizarRelatorioWord({ silencioso: true, aposSalvarSelecao: true });
+        alert(wordSincronizado
+          ? `${quantidadeSalva} foto(s) salvas. O Word foi atualizado diretamente no Drive.`
+          : `${quantidadeSalva} foto(s) salvas, mas o Word não foi sincronizado. Use “Atualizar Word” para tentar novamente.`);
+      }
     } catch (error) {
       console.error("Erro ao salvar seleção de fotos:", error);
 
@@ -1127,6 +1152,36 @@ export default function Medicoes() {
       });
   }
 
+  async function carregarWordSalvoDoDrive(item, frentesDaMedicao) {
+    setWordAtualizado(null);
+    setErroWord("");
+    setSelecaoFotoAlterada(false);
+    if (item?.status === "fechada") return;
+    const pastaFotosId = (frentesDaMedicao || []).map((frente) => frente.drive_pasta_id).find(Boolean);
+    if (!pastaFotosId) return;
+    try {
+      const parametros = new URLSearchParams({
+        acao: "buscar_relatorio_word",
+        drive_pasta_id: pastaFotosId,
+        contrato_numero: String(item.contratos?.numero || item.contrato_id || ""),
+        medicao: String(item.numero || ""),
+      });
+      const respostaDrive = await fetch(`${GOOGLE_DRIVE_SCRIPT_URL}?${parametros.toString()}`);
+      const resultado = await respostaDrive.json();
+      if (!respostaDrive.ok || !resultado.ok) throw new Error(resultado.erro || "Não foi possível consultar o Word no Drive.");
+      if (resultado.encontrado) {
+        setWordAtualizado({
+          docx_drive_file_id: resultado.file_id,
+          docx_drive_url: resultado.file_url,
+          sincronizacao_drive: "sincronizado",
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (erro) {
+      console.warn("Não foi possível localizar o Word no Drive:", erro);
+      setErroWord("Não foi possível consultar a cópia do Word no Drive.");
+    }
+  }
   // =====================================================
   // URL DO ARQUIVO
   // =====================================================
@@ -1139,10 +1194,139 @@ export default function Medicoes() {
     )}/view`;
   }
 
+  async function sincronizarRelatorioWord({ silencioso = false, aposSalvarSelecao = false } = {}) {
+    if (!medicaoFotosAtual?.id || salvandoWord || (selecaoFotoAlterada && !aposSalvarSelecao)) return false;
+    if (medicaoFotosAtual.status === "fechada") {
+      setErroWord("Esta medição está fechada; o relatório final existente não será recriado.");
+      return false;
+    }
+    setSalvandoWord(true);
+    setErroWord("");
+    setProgressoWord("Preparando o arquivo Word...");
+    const medicaoId = Number(medicaoFotosAtual.id);
+
+    try {
+      const { data: fotosSalvas, error: erroFotosSalvas } = await supabase
+        .from("relatorio_fotos")
+        .select("frente_id,drive_arquivo_id,nome_arquivo,legenda,ordem")
+        .eq("medicao_id", medicaoId)
+        .order("ordem", { ascending: true });
+      if (erroFotosSalvas) throw erroFotosSalvas;
+      if (!fotosSalvas?.length) throw new Error("Salve primeiro ao menos uma foto selecionada.");
+
+      const frenteIds = [...new Set(fotosSalvas.map((foto) => Number(foto.frente_id)))];
+      const { data: frentesWord, error: erroFrentesWord } = await supabase
+        .from("frentes")
+        .select("id,nome,ordem,drive_pasta_id")
+        .in("id", frenteIds);
+      if (erroFrentesWord) throw erroFrentesWord;
+
+      const arquivoPorId = new Map(
+        Object.values(fotosPorFrente).flatMap((item) => item.fotos || [])
+          .map((arquivo) => [String(arquivo.id), arquivo])
+      );
+      const frentePorId = new Map((frentesWord || []).map((frente) => [Number(frente.id), frente]));
+      const fotosWord = fotosSalvas.map((foto) => {
+        const frente = frentePorId.get(Number(foto.frente_id));
+        const id = String(foto.drive_arquivo_id || "");
+        const arquivoExistente = arquivoPorId.get(id) || {};
+        const pastaId = String(arquivoExistente._drive_pasta_id || frente?.drive_pasta_id || "");
+        if (!pastaId) throw new Error(`A frente ${frente?.nome || "selecionada"} não tem uma pasta Fotos configurada no Drive.`);
+        return {
+          ...foto,
+          _arquivoDrive: {
+            ...arquivoExistente,
+            id,
+            nome: foto.nome_arquivo || arquivoExistente.nome || id,
+            _drive_pasta_id: pastaId,
+            _medicao: String(medicaoFotosAtual.numero || ""),
+            _tamanhoImagem: "original",
+          },
+        };
+      });
+
+      const { gerarRelatorioWord } = await import("../../utils/gerarRelatorioWord");
+      const arquivoWord = await gerarRelatorioWord({
+        contratoNumero: medicaoFotosAtual.contratos?.numero || medicaoFotosAtual.contrato_id || "-",
+        contratoNome: medicaoFotosAtual.contratos?.nome || "",
+        numeroMedicao: medicaoFotosAtual.numero || "-",
+        frentes: frentesWord || [],
+        fotos: fotosWord,
+        logo: LOGO_LA_FORTE,
+        simbolo: SIMBOLO_LA_FORTE,
+        carregarImagem: (foto) => carregarImagemPeloAppsScript(foto._arquivoDrive),
+        progresso: (atual, total) => setProgressoWord(`Preparando foto ${atual} de ${total} para o Word...`),
+      });
+      if (arquivoWord.size > 32 * 1024 * 1024) {
+        throw new Error("O Word ultrapassou o limite seguro de envio direto ao Drive. Reduza a quantidade de fotos selecionadas e tente novamente.");
+      }
+
+      setProgressoWord("Sincronizando o Word com o Google Drive...");
+      const pastaFotosId = fotosWord[0]?._arquivoDrive?._drive_pasta_id;
+      const bytes = new Uint8Array(await arquivoWord.arrayBuffer());
+      let binario = "";
+      const tamanhoBloco = 0x8000;
+      for (let inicio = 0; inicio < bytes.length; inicio += tamanhoBloco) {
+        binario += String.fromCharCode(...bytes.subarray(inicio, inicio + tamanhoBloco));
+      }
+      const respostaDrive = await fetch(GOOGLE_DRIVE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body: JSON.stringify({
+          acao: "salvar_relatorio_word",
+          drive_pasta_id: pastaFotosId,
+          contrato_numero: String(medicaoFotosAtual.contratos?.numero || medicaoFotosAtual.contrato_id || ""),
+          medicao_numero: String(medicaoFotosAtual.numero || ""),
+          arquivo_base64: btoa(binario),
+          drive_file_id: wordAtualizado?.docx_drive_file_id || "",
+        }),
+      });
+      const textoDrive = await respostaDrive.text();
+      let resultadoDrive;
+      try { resultadoDrive = JSON.parse(textoDrive); }
+      catch { throw new Error("O Apps Script não devolveu uma resposta válida. Confira se a versão atual foi publicada."); }
+      if (!respostaDrive.ok || !resultadoDrive.ok) {
+        throw new Error(resultadoDrive.erro || `Não foi possível sincronizar com o Drive (HTTP ${respostaDrive.status}).`);
+      }
+
+      const dadosSincronizados = {
+        medicao_id: medicaoId,
+        docx_drive_file_id: resultadoDrive.file_id,
+        docx_drive_url: resultadoDrive.file_url,
+        sincronizacao_drive: "sincronizado",
+        updated_at: new Date().toISOString(),
+      };
+      setWordAtualizado(dadosSincronizados);
+      setErroWord("");
+      setSelecaoFotoAlterada(false);
+      if (!silencioso) alert("Word atualizado diretamente na pasta Relatório fotográfico deste contrato no Drive.");
+      return true;
+    } catch (erro) {
+      console.error("Erro ao salvar/sincronizar o Word:", erro);
+      setErroWord(erro.message || "Não foi possível atualizar o Word.");
+      if (!silencioso) alert(`Não foi possível atualizar o Word no Drive. Tente novamente.\n\n${erro.message || erro}`);
+      return false;
+    } finally {
+      setSalvandoWord(false);
+      setProgressoWord("");
+    }
+  }
   // Gera um relatório no padrão La Forte usando exclusivamente as fotos
   // persistidas em relatorio_fotos. A impressão do navegador salva em PDF.
   async function gerarRelatorioFotografico() {
     if (!medicaoFotosAtual?.id || gerandoRelatorio) return;
+    if (medicaoFotosAtual.status === "fechada") {
+      alert("Esta medição está fechada. O relatório final existente foi preservado e não será recriado.");
+      return;
+    }
+    if (selecaoFotoAlterada) {
+      alert("Salve a seleção de fotos antes de finalizar o relatório.");
+      return;
+    }
+    if (!wordAtualizado?.docx_drive_file_id || wordAtualizado.sincronizacao_drive !== "sincronizado") {
+      alert("Atualize e sincronize primeiro o arquivo Word do relatório.");
+      return;
+    }
 
     // Abrir a janela no clique evita bloqueio de popup enquanto consultamos o Supabase.
     const janela = window.open("", "_blank");
@@ -1202,6 +1386,7 @@ export default function Medicoes() {
         { tipo: 2, proporcao: 13.29 / 10, largura: 13.29, altura: 10 },
         { tipo: 3, proporcao: 7.53 / 10, largura: 7.53, altura: 10 },
         { tipo: 4, proporcao: 5.62 / 10, largura: 5.62, altura: 10 },
+        { tipo: 5, proporcao: 1600 / 600, largura: 17.4, altura: 6.525 },
       ];
       const identificarFormato = (largura, altura) => {
         if (!largura || !altura) return formatosFoto[1];
@@ -1289,24 +1474,44 @@ export default function Medicoes() {
             return { foto, formato: identificarFormato(dimensoes?.largura, dimensoes?.altura) };
           });
 
+        const primeiraFrenteDoRelatorio = primeiraPagina;
+        if (primeiraPagina && fotosDaFrente.length) {
+          const fotoUnica = fotosDaFrente.shift();
+          const tituloFrenteInicial = `<h2 class="frente-titulo">${escapar(nomesFrentes.get(Number(frente.id)) || "Frente")}</h2>`;
+          const metadadosIniciais = `<section class="identificacao"><h1>RELATÓRIO FOTOGRÁFICO</h1><p>CONTRATO: ${contratoNumero}</p><p>MEDIÇÃO ${numeroMedicao}</p></section>`;
+          const legendaInicial = String(fotoUnica.foto.legenda || "").trim();
+          const htmlLegendaInicial = legendaInicial
+            ? `<div class="legendas-centrais"><p>${escapar(legendaInicial)}</p></div>`
+            : "";
+          paginas.push(`<section class="pagina primeira-pagina"><div class="marca"><img class="simbolo" src="${SIMBOLO_LA_FORTE}" alt=""><img class="logotipo" src="${LOGO_LA_FORTE}" alt="La Forte Engenharia"></div>${metadadosIniciais}${tituloFrenteInicial}<main class="fotos"><div class="linha-fotos">${renderizarFoto(fotoUnica.foto, fotoUnica.formato)}</div>${htmlLegendaInicial}</main></section>`);
+          primeiraPagina = false;
+        }
+
         const linhas = [];
         let linhaAtual = [];
         let larguraLinha = 0;
         fotosDaFrente.forEach((item) => {
-          const larguraNecessaria = item.formato.largura + (linhaAtual.length ? 0.5 : 0);
-          if (linhaAtual.length && larguraLinha + larguraNecessaria > 17.4) {
+          const precisaLinhaUnica = item.formato.tipo === 1 || item.formato.tipo === 2;
+          const linhaAtualUnica = linhaAtual.some(({ formato }) => formato.tipo === 1 || formato.tipo === 2);
+          const larguraNecessaria = item.formato.largura + (linhaAtual.length ? 1.8 : 0);
+          if (linhaAtual.length && (precisaLinhaUnica || linhaAtualUnica || larguraLinha + larguraNecessaria > 19.4 + 0.01)) {
             linhas.push(linhaAtual);
             linhaAtual = [];
             larguraLinha = 0;
           }
-          const espaco = linhaAtual.length ? 0.5 : 0;
+          const espaco = linhaAtual.length ? 1.8 : 0;
           linhaAtual.push(item);
           larguraLinha += item.formato.largura + espaco;
         });
         if (linhaAtual.length) linhas.push(linhaAtual);
 
-        for (let inicioLinha = 0; inicioLinha < linhas.length; inicioLinha += 2) {
-          const linhasDaPagina = linhas.slice(inicioLinha, inicioLinha + 2);
+        const paginaComSomentePanoramicas = linhas.length > 0 && linhas.every((linha) =>
+          linha.every((item) => item.formato.tipo === 5)
+        );
+        const limiteLinhasPagina = paginaComSomentePanoramicas ? 3 : 2;
+
+        for (let inicioLinha = 0; inicioLinha < linhas.length; inicioLinha += limiteLinhasPagina) {
+          const linhasDaPagina = linhas.slice(inicioLinha, inicioLinha + limiteLinhasPagina);
           const fotosDaPagina = linhasDaPagina.flat();
           const legendasUnicas = [];
           const chavesLegendas = new Set();
@@ -1340,7 +1545,7 @@ export default function Medicoes() {
           const metadados = primeiraPagina
             ? `<section class="identificacao"><h1>RELATÓRIO FOTOGRÁFICO</h1><p>CONTRATO: ${contratoNumero}</p><p>MEDIÇÃO ${numeroMedicao}</p></section>`
             : "";
-          const tituloFrente = inicioLinha === 0
+          const tituloFrente = inicioLinha === 0 && !primeiraFrenteDoRelatorio
             ? `<h2 class="frente-titulo">${escapar(nomesFrentes.get(Number(frente.id)) || "Frente")}</h2>`
             : "";
           paginas.push(`<section class="pagina"><div class="marca"><img class="simbolo" src="${SIMBOLO_LA_FORTE}" alt=""><img class="logotipo" src="${LOGO_LA_FORTE}" alt="La Forte Engenharia"></div>${metadados}${tituloFrente}<main class="fotos">${htmlLinhas}</main></section>`);
@@ -1351,7 +1556,7 @@ export default function Medicoes() {
       janela.document.open();
       const endpointImagens = escapar(GOOGLE_DRIVE_SCRIPT_URL);
       janela.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório fotográfico — Medição ${numeroMedicao}</title><script>window.carregarImagemViaApi=function(img){if(img.dataset.proxyTentada)return;img.dataset.proxyTentada='1';const p=new URLSearchParams({acao:'imagem',arquivo_id:img.dataset.fileId,drive_pasta_id:img.dataset.driveFolderId,medicao:img.dataset.medicao,tamanho:'miniatura'});fetch('${endpointImagens}?'+p.toString()).then(r=>r.json()).then(d=>{if(!d.ok||!d.base64)throw new Error(d.erro||'Imagem indisponível');img.src='data:'+(d.tipo||'image/jpeg')+';base64,'+d.base64}).catch(()=>{img.onerror=null;img.alt='Imagem indisponível. Verifique o acesso ao Google Drive.'})};<\/script><style>
-        *{box-sizing:border-box}html,body{margin:0;color:#111;font-family:Arial,Helvetica,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#f1f5f9;border-bottom:1px solid #cbd5e1}.toolbar button{padding:10px 18px;border:0;border-radius:6px;background:#087f8c;color:#fff;font-weight:700;font-size:14px;cursor:pointer}.pagina{width:210mm;height:297mm;min-height:297mm;padding:6mm 18mm 8mm;margin:0 auto;page-break-after:always;break-after:page;break-inside:avoid;page-break-inside:avoid;position:relative;overflow:hidden}.pagina:last-child{page-break-after:auto;break-after:auto}.marca{height:20mm;display:flex;align-items:center;justify-content:flex-start;gap:5mm;margin-bottom:4mm}.simbolo{width:20mm;height:20mm;object-fit:contain}.logotipo{width:145mm;height:auto;object-fit:contain}.identificacao{text-align:left;margin:0 0 4mm}.identificacao h1{font-size:12pt;font-weight:400;margin:0 0 2mm}.identificacao p{font-size:11pt;font-weight:400;margin:0 0 2mm}.frente-titulo{font-size:12pt;font-weight:700;margin:3mm 0}.fotos{display:flex;flex-direction:column;gap:3mm;align-items:center;justify-content:flex-start}.linha-fotos{width:100%;display:flex;gap:5mm;align-items:center;justify-content:center;break-inside:avoid;page-break-inside:avoid}.foto-item{flex:none;margin:0;break-inside:avoid;text-align:center;border:0;padding:0;display:flex;align-items:center;justify-content:center;overflow:hidden}.foto-item img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;border:1pt solid #111;box-sizing:border-box}.legendas-centrais{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:5mm;row-gap:1mm;text-align:center;align-self:stretch;padding:1mm 3mm;font-size:9pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}.legendas-centrais p{flex:0 1 auto;max-width:100%;margin:0}@page{size:A4 portrait;margin:0}@media screen{body{background:#e5e7eb}.pagina{background:#fff;margin:16px auto;box-shadow:0 2px 14px #0002}}@media print{.toolbar{display:none!important}.pagina{margin:0}.foto-item img{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+        *{box-sizing:border-box}html,body{margin:0;color:#111;font-family:Arial,Helvetica,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#f1f5f9;border-bottom:1px solid #cbd5e1}.toolbar button{padding:10px 18px;border:0;border-radius:6px;background:#087f8c;color:#fff;font-weight:700;font-size:14px;cursor:pointer}.pagina{width:210mm;height:297mm;min-height:297mm;padding:6mm 8mm 8mm;margin:0 auto;page-break-after:always;break-after:page;break-inside:avoid;page-break-inside:avoid;position:relative;overflow:hidden}.pagina.primeira-pagina{padding-top:15mm}.pagina:last-child{page-break-after:auto;break-after:auto}.marca{height:20mm;display:flex;align-items:center;justify-content:center;gap:5mm;margin-bottom:10mm}.pagina.primeira-pagina .marca{margin-bottom:20mm}.simbolo{width:20mm;height:20mm;object-fit:contain}.logotipo{width:145mm;height:auto;object-fit:contain}.identificacao{text-align:left;margin:0 0 20mm}.identificacao h1{font-size:12pt;font-weight:400;margin:0 0 2mm}.identificacao p{font-size:11pt;font-weight:400;margin:0 0 2mm}.frente-titulo{font-size:12pt;font-weight:700;margin:3mm 0 10mm}.pagina.primeira-pagina .frente-titulo{margin-bottom:18mm}.fotos{display:flex;flex-direction:column;gap:10mm;align-items:center;justify-content:flex-start}.linha-fotos{width:100%;display:flex;column-gap:18mm;row-gap:10mm;align-items:center;justify-content:center;break-inside:avoid;page-break-inside:avoid}.foto-item{flex:none;margin:0;break-inside:avoid;text-align:center;border:0;padding:0;display:flex;align-items:center;justify-content:center;overflow:hidden}.foto-item img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;border:1pt solid #111;box-sizing:border-box}.legendas-centrais{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:18mm;row-gap:3mm;text-align:center;align-self:stretch;padding:4mm 3mm 3mm;font-size:9pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}.legendas-centrais p{flex:0 1 auto;max-width:100%;margin:0}@page{size:A4 portrait;margin:0}@media screen{body{background:#e5e7eb}.pagina{background:#fff;margin:16px auto;box-shadow:0 2px 14px #0002}}@media print{.toolbar{display:none!important}.pagina{margin:0}.foto-item img{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
       </style></head><body><div class="toolbar"><button type="button" onclick="window.print()">Imprimir / Salvar como PDF</button></div>${paginas.join("")}<script>window.addEventListener('load',()=>{const imgs=[...document.images];Promise.all(imgs.map(i=>i.complete?Promise.resolve():new Promise(r=>{i.onload=r;i.onerror=r;setTimeout(r,8000)}))).then(()=>setTimeout(()=>window.print(),300));});<\/script></body></html>`);
       janela.document.close();
       janela.focus();
@@ -1488,10 +1693,13 @@ export default function Medicoes() {
             <select
               value={medicao.contrato_id}
               onChange={(e) => alterarContrato(e.target.value)}
-              disabled={salvando}
+              disabled={salvando || Boolean(contratoIdContexto)}
             >
               <option value="">Selecione o contrato</option>
-              {contratos.map((item) => (
+              {(contratoIdContexto
+                ? contratos.filter((item) => Number(item.id) === contratoIdContexto)
+                : contratos
+              ).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.numero} - {item.nome}
                 </option>
@@ -1895,23 +2103,42 @@ export default function Medicoes() {
                 >
                   {salvandoSelecao ? "Salvando..." : "💾 Salvar seleção"}
                 </button>
-                <button
-                  type="button"
-                  onClick={gerarRelatorioFotografico}
-                  disabled={gerandoRelatorio || carregandoSelecao || salvandoSelecao}
-                  style={{
-                    padding: "8px 12px",
-                    border: "1px solid #0f766e",
-                    borderRadius: "7px",
-                    background: "#0f766e",
-                    color: "#fff",
-                    cursor: gerandoRelatorio ? "wait" : "pointer",
-                    fontWeight: 700,
-                  }}
-                >
-                  {gerandoRelatorio ? "Gerando..." : "📄 Gerar relatório"}
-                </button>
+                {medicaoFotosAtual?.status !== "fechada" && <>
+                  <button
+                    type="button"
+                    onClick={() => selecaoFotoAlterada ? salvarSelecaoFotos() : sincronizarRelatorioWord()}
+                    disabled={salvandoWord || salvandoSelecao || carregandoSelecao || totalFotosSelecionadas === 0}
+                    style={{ padding: "8px 12px", border: "1px solid #7c3aed", borderRadius: "7px", background: "#7c3aed", color: "#fff", cursor: salvandoWord ? "wait" : "pointer", fontWeight: 700 }}
+                  >
+                    {salvandoWord ? "Atualizando Word..." : selecaoFotoAlterada ? "💾 Salvar + atualizar Word" : "📝 Atualizar Word"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={gerarRelatorioFotografico}
+                    disabled={gerandoRelatorio || carregandoSelecao || salvandoSelecao || salvandoWord || selecaoFotoAlterada || wordAtualizado?.sincronizacao_drive !== "sincronizado"}
+                    style={{
+                      padding: "8px 12px",
+                      border: "1px solid #0f766e",
+                      borderRadius: "7px",
+                      background: "#0f766e",
+                      color: "#fff",
+                      cursor: gerandoRelatorio ? "wait" : "pointer",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {gerandoRelatorio ? "Gerando..." : "📄 Finalizar / gerar PDF"}
+                  </button>
+                </>}
               </div>
+            </div>
+
+            <div style={{ padding: "9px 22px", background: "#fff", borderBottom: "1px solid #e5e7eb", color: erroWord ? "#b91c1c" : "#475569", fontSize: "14px" }}>
+              {medicaoFotosAtual?.status === "fechada"
+                ? "Medição fechada: o relatório final existente foi preservado e não será recriado."
+                : salvandoWord
+                  ? progressoWord
+                  : erroWord || (wordAtualizado?.sincronizacao_drive === "sincronizado" ? "Word atualizado diretamente no Google Drive." : "O Word será criado/atualizado no Google Drive ao salvar a seleção de fotos.")}
+              {wordAtualizado?.docx_drive_url && <a href={wordAtualizado.docx_drive_url} target="_blank" rel="noreferrer" style={{ marginLeft: 12 }}>Abrir cópia no Drive</a>}
             </div>
 
             {/* CONTEÚDO */}
@@ -2272,6 +2499,10 @@ export default function Medicoes() {
                                     {selecionada && (
                                       <textarea
                                         value={fotosSelecionadas[String(arquivo.id)]?.legenda || ""}
+                                        lang="pt-BR"
+                                        spellCheck={true}
+                                        autoCorrect="on"
+                                        autoCapitalize="sentences"
                                         onChange={(evento) =>
                                           atualizarLegendaFoto(arquivo.id, evento.target.value)
                                         }

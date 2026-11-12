@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import "./App.css";
 
@@ -6,13 +6,13 @@ import { supabase } from "./services/supabase";
 
 import Sidebar from "./components/Sidebar/Sidebar";
 
-import Dashboard from "./pages/Dashboard/Dashboard";
-import Contratos from "./pages/Contratos/Contratos";
-import Frentes from "./pages/Frentes/Frentes";
-import Medicoes from "./pages/Medicoes/Medicoes";
-import Fotos from "./pages/Fotos/Fotos";
-import Usuarios from "./pages/Usuarios/Usuarios";
-import Login from "./pages/Login/Login";
+const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const Contratos = lazy(() => import("./pages/Contratos/Contratos"));
+const Frentes = lazy(() => import("./pages/Frentes/Frentes"));
+const Medicoes = lazy(() => import("./pages/Medicoes/Medicoes"));
+const Fotos = lazy(() => import("./pages/Fotos/Fotos"));
+const Usuarios = lazy(() => import("./pages/Usuarios/Usuarios"));
+const Login = lazy(() => import("./pages/Login/Login"));
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -702,7 +702,7 @@ function App() {
   // =====================================================
 
   if (!usuario) {
-    return <Login />;
+    return (<Suspense fallback={<div className="carregando-pagina">Carregando...</div>}><Login /></Suspense>);
   }
 
   // =====================================================
@@ -721,7 +721,7 @@ function App() {
       />
 
       <main className="content">
-        {renderPagina()}
+        <Suspense fallback={<div className="carregando-pagina">Carregando...</div>}>{renderPagina()}</Suspense>
       </main>
     </div>
   );
