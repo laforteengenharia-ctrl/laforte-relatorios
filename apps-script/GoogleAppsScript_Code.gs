@@ -1,6 +1,12 @@
 const VERSAO_CUSTOS_IMPORTADOR = "custos-itens-2026-11-25-r12";
 const VERSAO_WORD_SYNC = "word-sync-2026-11-19-r6";
 
+// IDs fixos das pastas raiz de Contratos no Google Drive (usadas pela
+// sincronização automática de estrutura — ver "SINCRONIZAÇÃO DE ESTRUTURA
+// DE CONTRATOS/FRENTES" mais abaixo). Trocar aqui se as pastas mudarem.
+const PASTA_CONTRATOS_ATIVOS_ID = "1dCQUK4VTQDfy0j-rGWnpuvRLuCzBQRHp";
+const PASTA_CONTRATOS_INATIVOS_ID = "1U_FG769AKRsH9VY_ra-UhXruwkVoZVPx";
+
 // =========================================================
 // AUTENTICAÇÃO (SESSÃO DO SUPABASE)
 // =========================================================
@@ -95,6 +101,9 @@ function doGet(e) {
         return resposta({ ok: false, erro: "Informe o ID da pasta Contratos Ativos." });
       }
       return listarEstruturaContratos(pastaContratosId);
+    }
+    if (acao === "sincronizar_estrutura_contratos") {
+      return sincronizarEstruturaContratos();
     }
     if (acao === "buscar_relatorio_word") {
       if (!pastaFotosId || !numeroContrato || !numeroMedicao) {
@@ -516,6 +525,195 @@ function listarEstruturaContratos(pastaContratosId) {
   return resposta({ ok: true, raiz: { id: raiz.getId(), nome: raiz.getName() }, contratos: contratos, avisos: avisos });
 }
 
+// =========================================================
+// SINCRONIZAÇÃO DE ESTRUTURA DE CONTRATOS/FRENTES (DRIVE <-> APP)
+// =========================================================
+// Mantém a pasta de cada contrato/frente no Drive e o status/situação no
+// app sempre no mesmo lugar: quando o app cria ou inativa/arquiva/finaliza
+// algo, a pasta certa é criada/movida aqui; quando alguém mexe direto no
+// Drive (cria ou move uma pasta manualmente), o app detecta a diferença na
+// próxima sincronização (ver sincronizarEstruturaDrive em
+// src/services/estruturaDrive.js) e atualiza o banco.
+//
+// Estrutura esperada:
+//   Contratos Ativos/      (PASTA_CONTRATOS_ATIVOS_ID)
+//   Contratos Inativos/    (PASTA_CONTRATOS_INATIVOS_ID)
+//     Contrato {numero} - {nome}/
+//       OBRAS EM ANDAMENTO/
+//         {nome da frente}/
+//           Fotos/
+//             Medição NN/
+//       OBRAS FINALIZADAS/
+//         {nome da frente}/
+//           Fotos/
+//             Medição NN/
+
+// Varre uma das duas pastas raiz (Ativos ou Inativos) e devolve os
+// contratos/frentes/medições encontrados, já com o status e a situação
+// implícitos pela localização de cada pasta.
+function escanearRaizContratos(raizId, statusContrato) {
+  const raiz = DriveApp.getFolderById(raizId);
+  const contratos = [];
+  const avisos = [];
+  const pastasContrato = raiz.getFolders();
+
+  while (pastasContrato.hasNext()) {
+    const pastaContrato = pastasContrato.next();
+    const nomePastaContrato = pastaContrato.getName().trim();
+    const correspondenciaContrato = nomePastaContrato.match(/^Contrato\s+(.+?)\s*[-–—]\s*(.+)$/i);
+    if (!correspondenciaContrato) {
+      avisos.push(`Contrato ignorado por não seguir o padrão "Contrato número - nome": ${nomePastaContrato}`);
+      continue;
+    }
+
+    const numero = correspondenciaContrato[1].trim();
+    const nome = correspondenciaContrato[2].trim();
+    const frentes = [];
+
+    [
+      { nomePasta: "OBRAS EM ANDAMENTO", situacao: "em_andamento" },
+      { nomePasta: "OBRAS FINALIZADAS", situacao: "finalizada" },
+    ].forEach(function (grupo) {
+      const pastaObras = encontrarSubpasta(pastaContrato, grupo.nomePasta);
+      if (!pastaObras) return;
+
+      const pastasFrentes = pastaObras.getFolders();
+      while (pastasFrentes.hasNext()) {
+        const pastaFrente = pastasFrentes.next();
+        const nomeFrente = pastaFrente.getName().trim();
+        if (/^(custo|fotos)$/i.test(nomeFrente)) continue;
+
+        const pastaFotos = encontrarSubpasta(pastaFrente, "Fotos");
+        if (!pastaFotos) {
+          avisos.push(`Pasta Fotos não encontrada na frente ${nomeFrente} (${nomePastaContrato})`);
+          return;
+        }
+
+        const medicoes = [];
+        const pastasMedicoes = pastaFotos.getFolders();
+        while (pastasMedicoes.hasNext()) {
+          const pastaMedicao = pastasMedicoes.next();
+          const nomeMedicao = pastaMedicao.getName().trim();
+          const correspondenciaMedicao = nomeMedicao.match(/^Medição\s+0*(\d+)/i);
+          if (!correspondenciaMedicao) continue;
+          medicoes.push({
+            numero: Number(correspondenciaMedicao[1]),
+            nome: nomeMedicao,
+            id: pastaMedicao.getId()
+          });
+        }
+        medicoes.sort((a, b) => a.numero - b.numero);
+
+        frentes.push({
+          nome: nomeFrente,
+          drive_pasta_id: pastaFotos.getId(),
+          situacao: grupo.situacao,
+          medicoes: medicoes
+        });
+      }
+    });
+
+    contratos.push({
+      numero: numero,
+      nome: nome,
+      drive_pasta_id: pastaContrato.getId(),
+      status: statusContrato,
+      frentes: frentes
+    });
+  }
+
+  return { contratos: contratos, avisos: avisos };
+}
+
+// Ação GET usada pelo app a cada abertura da tela de Contratos/Frentes
+// (sincronização silenciosa) e pelo botão "Sincronizar com Drive".
+function sincronizarEstruturaContratos() {
+  const ativos = escanearRaizContratos(PASTA_CONTRATOS_ATIVOS_ID, "ativo");
+  const inativos = escanearRaizContratos(PASTA_CONTRATOS_INATIVOS_ID, "encerrado");
+  const contratos = ativos.contratos.concat(inativos.contratos);
+  contratos.sort((a, b) => a.numero.localeCompare(b.numero, "pt-BR", { numeric: true }));
+  return resposta({ ok: true, contratos: contratos, avisos: ativos.avisos.concat(inativos.avisos) });
+}
+
+// Troca o(s) pai(s) atual(is) de uma pasta por um único pai novo. O Drive
+// raramente permite mais de um pai ao mesmo tempo; removemos todos os
+// antigos para a pasta nunca ficar "grudada" em dois lugares.
+function moverPastaParaNovoPai(pasta, novoPai) {
+  if (pasta.getId() === novoPai.getId()) return;
+  const paisAtuais = pasta.getParents();
+  const idsParaRemover = [];
+  while (paisAtuais.hasNext()) {
+    const pai = paisAtuais.next();
+    if (pai.getId() !== novoPai.getId()) idsParaRemover.push(pai.getId());
+  }
+  novoPai.addFolder(pasta);
+  idsParaRemover.forEach(function (idPai) {
+    DriveApp.getFolderById(idPai).removeFolder(pasta);
+  });
+}
+
+// Cria a pasta de um contrato novo dentro de "Contratos Ativos", já com as
+// subpastas OBRAS EM ANDAMENTO e OBRAS FINALIZADAS prontas para receber
+// frentes.
+function criarPastaContrato(numero, nome) {
+  if (!numero || !nome) throw new Error("Informe o número e o nome do contrato.");
+  const raiz = DriveApp.getFolderById(PASTA_CONTRATOS_ATIVOS_ID);
+  const nomePasta = nomeSeguroArquivo(`Contrato ${numero} - ${nome}`);
+  const pastaContrato = raiz.createFolder(nomePasta);
+  pastaContrato.createFolder("OBRAS EM ANDAMENTO");
+  pastaContrato.createFolder("OBRAS FINALIZADAS");
+  return resposta({ ok: true, drive_pasta_id: pastaContrato.getId() });
+}
+
+// Move a pasta de um contrato entre "Contratos Ativos" e "Contratos
+// Inativos" quando o status muda para/de "ativo" no app.
+function moverPastaContrato(drivePastaContratoId, ativo) {
+  if (!drivePastaContratoId) throw new Error("Informe a pasta do contrato a mover.");
+  const pasta = DriveApp.getFolderById(drivePastaContratoId);
+  const destino = DriveApp.getFolderById(ativo ? PASTA_CONTRATOS_ATIVOS_ID : PASTA_CONTRATOS_INATIVOS_ID);
+  moverPastaParaNovoPai(pasta, destino);
+  return resposta({ ok: true });
+}
+
+// Cria a pasta de uma frente nova (com a subpasta Fotos) dentro de "OBRAS
+// EM ANDAMENTO" do contrato indicado.
+function criarPastaFrente(drivePastaContratoId, nomeFrente) {
+  if (!drivePastaContratoId || !nomeFrente) throw new Error("Informe o contrato e o nome da frente.");
+  const pastaContrato = DriveApp.getFolderById(drivePastaContratoId);
+  const pastaObras = encontrarSubpasta(pastaContrato, "OBRAS EM ANDAMENTO") || pastaContrato.createFolder("OBRAS EM ANDAMENTO");
+  const pastaFrente = pastaObras.createFolder(nomeSeguroArquivo(nomeFrente));
+  const pastaFotos = pastaFrente.createFolder("Fotos");
+  return resposta({ ok: true, drive_pasta_id: pastaFotos.getId() });
+}
+
+// Move a pasta de uma frente (localizada a partir da pasta Fotos) entre
+// OBRAS EM ANDAMENTO e OBRAS FINALIZADAS — do mesmo contrato ou, se
+// drivePastaContratoDestinoId vier preenchido, para outro contrato (usado
+// na transferência de frente entre contratos).
+function moverPastaFrente(drivePastaFotosId, emAndamento, drivePastaContratoDestinoId) {
+  if (!drivePastaFotosId) throw new Error("Informe a pasta Fotos da frente a mover.");
+  const pastaFotos = DriveApp.getFolderById(drivePastaFotosId);
+  const paisFotos = pastaFotos.getParents();
+  if (!paisFotos.hasNext()) throw new Error("Não encontrei a pasta da frente a partir da pasta Fotos.");
+  const pastaFrente = paisFotos.next();
+
+  let pastaContrato;
+  if (drivePastaContratoDestinoId) {
+    pastaContrato = DriveApp.getFolderById(drivePastaContratoDestinoId);
+  } else {
+    const paisObras = pastaFrente.getParents();
+    if (!paisObras.hasNext()) throw new Error("Não encontrei o contrato a partir da pasta da frente.");
+    const paisContrato = paisObras.next().getParents();
+    if (!paisContrato.hasNext()) throw new Error("Não encontrei o contrato a partir da pasta de obras.");
+    pastaContrato = paisContrato.next();
+  }
+
+  const nomeSubpasta = emAndamento ? "OBRAS EM ANDAMENTO" : "OBRAS FINALIZADAS";
+  const pastaDestino = encontrarSubpasta(pastaContrato, nomeSubpasta) || pastaContrato.createFolder(nomeSubpasta);
+  moverPastaParaNovoPai(pastaFrente, pastaDestino);
+  return resposta({ ok: true, drive_pasta_contrato_id: pastaContrato.getId() });
+}
+
 function encontrarSubpasta(pasta, nomeEsperado) {
   const pastas = pasta.getFolders();
   while (pastas.hasNext()) {
@@ -542,6 +740,22 @@ function doPost(e) {
     syncToken = syncToken || String(body.sync_token || "").trim().slice(0, 100);
     if (body.acao === "salvar_custo" || body.acao === "excluir_custo" || body.acao === "ajustar_quantidade_custo") {
       return processarAcaoCusto(body);
+    }
+    if (body.acao === "criar_pasta_contrato") {
+      return criarPastaContrato(String(body.numero || "").trim(), String(body.nome || "").trim());
+    }
+    if (body.acao === "mover_pasta_contrato") {
+      return moverPastaContrato(String(body.drive_pasta_id || "").trim(), Boolean(body.ativo));
+    }
+    if (body.acao === "criar_pasta_frente") {
+      return criarPastaFrente(String(body.drive_pasta_contrato_id || "").trim(), String(body.nome_frente || "").trim());
+    }
+    if (body.acao === "mover_pasta_frente") {
+      return moverPastaFrente(
+        String(body.drive_pasta_id || "").trim(),
+        Boolean(body.em_andamento),
+        body.drive_pasta_contrato_destino_id ? String(body.drive_pasta_contrato_destino_id).trim() : null
+      );
     }
     // Envio do Word em pedaços pequenos (19/11): confirmado pelo histórico
     // de execuções do Apps Script que um envio único grande demais é
@@ -835,6 +1049,75 @@ function finalizarRelatorioWordPorPedacos(body, syncToken) {
 // nomes já flexibilizada (ver encontrarAbaPorNomeFlexivel), porque as duas
 // checagens acontecem antes de qualquer uma das duas criações terminar.
 // obterLockCustos() serializa essas execuções para eliminar a corrida.
+
+// Versões "só leitura" de localizarPastaCustosDaFrente/localizarOuCriarPlanilhaCustos,
+// usadas pelo caminho rápido sem lock (ver responderCustosDrive): nunca criam
+// pasta, planilha ou aba — se algo não existir ainda, devolvem null e quem
+// chamou cai no caminho de sempre, protegido pelo lock, que cria o que faltar.
+function encontrarPastaCustosExistente(idFotos) {
+  const pastaFotos = DriveApp.getFolderById(idFotos);
+  const pais = pastaFotos.getParents();
+  if (!pais.hasNext()) return null;
+  const pastaFrente = pais.next();
+
+  const pastas = pastaFrente.getFolders();
+  const candidatas = [];
+  while (pastas.hasNext()) {
+    const pasta = pastas.next();
+    const nome = normalizarTexto(pasta.getName());
+    if (nome === "custo" || nome === "custos") candidatas.push(pasta);
+  }
+
+  if (candidatas.length === 1) return candidatas[0];
+  if (candidatas.length > 1) {
+    const comArquivoOriginal = candidatas.filter(pastaTemArquivoDeCustoOriginal);
+    if (comArquivoOriginal.length === 1) return comArquivoOriginal[0];
+  }
+  // Nenhuma pasta, ou caso ambíguo: deixa o caminho com lock decidir (ele
+  // cria quando falta, ou lança o erro detalhado de sempre quando é ambíguo).
+  return null;
+}
+
+function encontrarPlanilhaCustosExistente(pastaCustos, nomeBase) {
+  const pastaBase = encontrarSubpasta(pastaCustos, "Dados do aplicativo");
+  if (!pastaBase) return null;
+  const arquivos = pastaBase.getFilesByName(nomeBase);
+  while (arquivos.hasNext()) {
+    const arquivo = arquivos.next();
+    if (arquivo.getMimeType() === MimeType.GOOGLE_SHEETS) return SpreadsheetApp.openById(arquivo.getId());
+  }
+  return null;
+}
+
+function tentarResponderCustosSemLock(idFotos, nomeBase) {
+  const pastaCustos = encontrarPastaCustosExistente(idFotos);
+  if (!pastaCustos) return null;
+
+  const planilha = encontrarPlanilhaCustosExistente(pastaCustos, nomeBase);
+  if (!planilha) return null;
+
+  // Se ainda não foi feita a primeira importação do Excel original, o
+  // caminho de sempre precisa rodar (pode importar dados) — não dá pra
+  // responder só de leitura.
+  const chaveImportacao = "custos-importado-" + pastaCustos.getId();
+  if (PropertiesService.getScriptProperties().getProperty(chaveImportacao) !== "true") return null;
+
+  const nomeXlsx = nomeBase + ".xlsx";
+  const arquivoXlsx = localizarArquivoExcelDaPasta(pastaCustos, nomeXlsx);
+  if (!arquivoXlsx) return null;
+
+  return resposta({
+    ok: true,
+    lancamentos: lerLancamentosCustos(planilha),
+    importados: 0,
+    planilha_url: planilha.getUrl(),
+    excel_url: arquivoXlsx.getUrl(),
+    excel_nome: arquivoXlsx.getName(),
+    pasta_nome: pastaCustos.getName(),
+    versao_importador: VERSAO_CUSTOS_IMPORTADOR,
+  });
+}
+
 function obterLockCustos() {
   const lock = LockService.getScriptLock();
   try {
@@ -850,10 +1133,25 @@ function responderCustosDrive(parametros, exportarXlsx, reimportar) {
   const numeroContrato = String(parametros.contrato_numero || "").trim();
   const nomeFrente = String(parametros.frente_nome || "").trim();
   if (!idFotos || !numeroContrato || !nomeFrente) throw new Error("Informe a pasta Fotos, o contrato e a frente.");
+  const nomeBase = nomeSeguroArquivo("Custos - " + nomeFrente);
+
+  // Caminho rápido, sem lock: numa simples consulta (listar_custos), se a
+  // pasta Custo, a planilha e o Excel já existirem e os dados já tiverem
+  // sido importados alguma vez, não há nada para criar nem alterar — é
+  // só leitura. Pular o lock aqui evita que a tela de custos de um
+  // contrato inteiro (que consulta todas as frentes de uma vez) sirva uma
+  // fila só, onde as últimas frentes esperam as anteriores e às vezes
+  // acabam caindo no erro de "processando outra atualização". Se faltar
+  // qualquer coisa, a função devolve null e cai no caminho de sempre, com
+  // lock, que cria o que for preciso.
+  if (!reimportar && !exportarXlsx) {
+    const respostaRapida = tentarResponderCustosSemLock(idFotos, nomeBase);
+    if (respostaRapida) return respostaRapida;
+  }
+
   const lock = obterLockCustos();
   try {
     const pastaCustos = localizarPastaCustosDaFrente(idFotos);
-    const nomeBase = nomeSeguroArquivo("Custos - " + nomeFrente);
     const planilha = localizarOuCriarPlanilhaCustos(pastaCustos, nomeBase);
     let importados = 0;
     const chaveImportacao = "custos-importado-" + pastaCustos.getId();
@@ -1048,8 +1346,18 @@ function importarPlanilhaExistente(pastaCustos, planilhaDestino) {
       convertido = converterExcelParaPlanilha(fonte, pastaDados);
       planilhaFonte = SpreadsheetApp.openById(convertido.getId());
     }
-    const quantidade = copiarLancamentosDaPlanilha(planilhaFonte, planilhaDestino, fonte.getId());
-    if (!quantidade && lerLancamentosCustos(planilhaDestino).length === 0) throw new Error("Encontrei " + fonte.getName() + ", mas não achei linhas com descrição e valor. Confira os cabeçalhos do Excel.");
+    const resultadoCopia = copiarLancamentosDaPlanilha(planilhaFonte, planilhaDestino, fonte.getId());
+    const quantidade = resultadoCopia.importados;
+    // Só é erro de verdade quando NENHUMA aba teve um cabeçalho reconhecido
+    // (Descrição + Total/Valor unitário) — aí sim o formato do Excel não bate
+    // com o esperado. Se o cabeçalho foi reconhecido mas simplesmente não há
+    // nenhum lançamento com valor (planilha de custos legítima, só que ainda
+    // vazia — por exemplo, uma cópia gerada pelo próprio app que perdeu a
+    // marca de "gerada pelo app" e acabou sendo tratada como original),
+    // não há nada de errado: é só "zero lançamentos para importar".
+    if (!quantidade && !resultadoCopia.cabecalhoEncontrado && lerLancamentosCustos(planilhaDestino).length === 0) {
+      throw new Error("Encontrei " + fonte.getName() + ", mas não achei linhas com descrição e valor. Confira os cabeçalhos do Excel.");
+    }
     PropertiesService.getScriptProperties().setProperty("custos-fonte-original-" + pastaCustos.getId(), fonte.getId());
     recalcularParticipacoes(planilhaDestino);
     SpreadsheetApp.flush();
@@ -1078,6 +1386,13 @@ function converterExcelParaPlanilha(arquivoExcel, pastaDestino) {
 }
 function copiarLancamentosDaPlanilha(origem, destino, idOrigem) {
   let importados = 0;
+  // Além da quantidade importada, registra se ALGUMA aba teve um cabeçalho
+  // reconhecido (Descrição + Total/Valor unitário), mesmo que nenhuma linha
+  // vire lançamento de verdade (ex.: uma planilha de custos legítima, mas
+  // ainda totalmente vazia). Isso permite ao chamador (importarPlanilhaExistente)
+  // distinguir "achei o formato certo, só que está vazio" (não é erro) de
+  // "não reconheci o formato desse arquivo" (erro de verdade).
+  let cabecalhoEncontrado = false;
   origem.getSheets().forEach(function(abaOrigem, indiceAba) {
     const dados = abaOrigem.getDataRange().getValues();
     let indiceCabecalho = -1;
@@ -1091,6 +1406,7 @@ function copiarLancamentosDaPlanilha(origem, destino, idOrigem) {
       }
     }
     if (!colunas) return;
+    cabecalhoEncontrado = true;
 
     const numeroMedicao = acharNumeroMedicao(abaOrigem.getName(), dados);
     const periodo = acharPeriodoMedicao(dados);
@@ -1216,7 +1532,7 @@ function copiarLancamentosDaPlanilha(origem, destino, idOrigem) {
     });
     if (linhasImportadas) formatarAbaCustos(destinoAba);
   });
-  return importados;
+  return { importados: importados, cabecalhoEncontrado: cabecalhoEncontrado };
 }
 
 function mapearColunasCustos(cabecalhos) {

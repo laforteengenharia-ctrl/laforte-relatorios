@@ -7,6 +7,11 @@ import ContratoForm from "../../components/ContratoForm/ContratoForm";
 import ImportarContratosDrive from "./ImportarContratosDrive";
 
 import { supabase } from "../../services/supabase";
+import {
+  criarPastaContratoNoDrive,
+  moverPastaContratoNoDrive,
+  sincronizarEstruturaDrive,
+} from "../../services/estruturaDrive";
 
 export default function Contratos({ abrirContrato }) {
   const [modalAberto, setModalAberto] = useState(false);
@@ -22,6 +27,10 @@ export default function Contratos({ abrirContrato }) {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
+  // Aviso discreto (não bloqueia a tela) sobre a última sincronização
+  // automática com o Drive, feita toda vez que a tela abre.
+  const [avisoSincronizacaoDrive, setAvisoSincronizacaoDrive] = useState("");
+
   const [contrato, setContrato] = useState({
     id: null,
     numero: "",
@@ -30,6 +39,10 @@ export default function Contratos({ abrirContrato }) {
     cidade: "",
     uf: "SC",
     status: "Ativo",
+    // Guarda o status como estava antes de abrir a edição, só para saber
+    // se a mudança de status desta edição precisa mover a pasta no Drive
+    // (não é enviado ao banco).
+    statusOriginal: "ativo",
   });
 
   // =====================================================
@@ -107,8 +120,67 @@ export default function Contratos({ abrirContrato }) {
     setCarregando(false);
   }
 
+  // =====================================================
+  // SINCRONIZAÇÃO AUTOMÁTICA COM O DRIVE
+  // =====================================================
+  // Toda vez que esta tela abre, confere silenciosamente se alguém criou ou
+  // moveu uma pasta de contrato/frente direto no Google Drive, e atualiza o
+  // banco de acordo (ver src/services/estruturaDrive.js). Erros aqui não
+  // bloqueiam a tela — os contratos já cadastrados continuam aparecendo
+  // normalmente mesmo se o Drive estiver indisponível.
+
   useEffect(() => {
+    let ativo = true;
+
+    // Carrega a lista de contratos imediatamente (consulta rápida e direta
+    // no banco), sem esperar a sincronização com o Drive. A sincronização
+    // varre a estrutura inteira de pastas (Contratos Ativos + Inativos) no
+    // Google Drive e pode demorar bem mais — por isso ela roda em segundo
+    // plano, sem travar a tela, e só recarrega a lista se tiver mudado algo.
     carregarContratos();
+
+    async function sincronizarEmSegundoPlano() {
+      try {
+        const { totais, avisos } = await sincronizarEstruturaDrive();
+        if (!ativo) return;
+
+        const mudou =
+          totais.contratosNovos ||
+          totais.frentesNovas ||
+          totais.medicoesNovas ||
+          totais.statusAtualizados ||
+          totais.situacoesAtualizadas;
+
+        if (mudou) {
+          setAvisoSincronizacaoDrive(
+            `Sincronizado com o Drive: ${totais.contratosNovos} contrato(s) novo(s), ` +
+              `${totais.frentesNovas} frente(s) nova(s), ${totais.statusAtualizados} status atualizado(s), ` +
+              `${totais.situacoesAtualizadas} situação(ões) de obra atualizada(s).`
+          );
+          await carregarContratos();
+        } else if (avisos.length) {
+          setAvisoSincronizacaoDrive(
+            `Sincronizado com o Drive (${avisos.length} aviso(s) sobre pastas fora do padrão — veja o console).`
+          );
+          console.warn("Avisos da sincronização com o Drive:", avisos);
+        } else {
+          setAvisoSincronizacaoDrive("");
+        }
+      } catch (erro) {
+        console.error("Falha ao sincronizar estrutura com o Drive:", erro);
+        if (ativo) {
+          setAvisoSincronizacaoDrive(
+            "Não foi possível sincronizar com o Google Drive agora (" + (erro.message || "erro desconhecido") + ")."
+          );
+        }
+      }
+    }
+
+    sincronizarEmSegundoPlano();
+
+    return () => {
+      ativo = false;
+    };
   }, []);
 
   // =====================================================
@@ -160,6 +232,7 @@ export default function Contratos({ abrirContrato }) {
       cidade: "",
       uf: "SC",
       status: "Ativo",
+      statusOriginal: "ativo",
     });
 
     setEditando(false);
@@ -179,6 +252,8 @@ export default function Contratos({ abrirContrato }) {
       cidade: item.cidade || "",
       uf: item.uf || "SC",
       status: mostrarStatus(item.status),
+      statusOriginal: normalizarStatus(item.status),
+      driveOriginal: item.drive_pasta_id || "",
     });
 
     setEditando(true);
@@ -240,6 +315,24 @@ export default function Contratos({ abrirContrato }) {
 
           return;
         }
+
+        // Se a edição mudou o contrato de "ativo" para não-ativo (ou
+        // vice-versa), move a pasta dele entre Contratos Ativos/Inativos no
+        // Drive — igual ao que acontece ao clicar em Inativar/Reativar.
+        const eraAtivo = contrato.statusOriginal === "ativo";
+        const ficouAtivo = dados.status === "ativo";
+        if (eraAtivo !== ficouAtivo && contrato.driveOriginal) {
+          try {
+            await moverPastaContratoNoDrive(contrato.driveOriginal, ficouAtivo);
+          } catch (erroDrive) {
+            console.error("Falha ao mover a pasta do contrato no Drive:", erroDrive);
+            alert(
+              "O contrato foi salvo, mas não foi possível mover a pasta dele no Google Drive agora.\n\n" +
+                (erroDrive.message || "") +
+                "\n\nMova a pasta manualmente ou tente novamente mais tarde (a próxima sincronização também corrige isso)."
+            );
+          }
+        }
       }
 
       // ===================================================
@@ -247,9 +340,11 @@ export default function Contratos({ abrirContrato }) {
       // ===================================================
 
       else {
-        const { error } = await supabase
+        const { data: novo, error } = await supabase
           .from("contratos")
-          .insert([dados]);
+          .insert([dados])
+          .select("id")
+          .single();
 
         if (error) {
           console.error("Erro ao criar contrato:", error);
@@ -259,6 +354,33 @@ export default function Contratos({ abrirContrato }) {
           );
 
           return;
+        }
+
+        // Cria a pasta do contrato no Drive (dentro de Contratos Ativos,
+        // já com OBRAS EM ANDAMENTO/OBRAS FINALIZADAS) e salva o ID dela no
+        // contrato recém-criado. Se isso falhar, o contrato continua
+        // cadastrado — a pasta pode ser criada manualmente no Drive depois
+        // (a próxima sincronização encontra e vincula pelo número/nome).
+        try {
+          const drivePastaId = await criarPastaContratoNoDrive(dados.numero, dados.nome);
+          const { error: erroPasta } = await supabase
+            .from("contratos")
+            .update({ drive_pasta_id: drivePastaId })
+            .eq("id", novo.id);
+          if (erroPasta) {
+            console.error("Falha ao salvar o ID da pasta do contrato:", erroPasta);
+          }
+        } catch (erroDrive) {
+          console.error("Falha ao criar a pasta do contrato no Drive:", erroDrive);
+          alert(
+            "O contrato foi criado, mas não foi possível criar a pasta dele no Google Drive agora.\n\n" +
+              (erroDrive.message || "") +
+              "\n\nCrie a pasta manualmente em Contratos Ativos, no padrão \"Contrato " +
+              dados.numero +
+              " - " +
+              dados.nome +
+              '", com as subpastas OBRAS EM ANDAMENTO e OBRAS FINALIZADAS — a próxima sincronização encontra e vincula ela sozinha.'
+          );
         }
       }
 
@@ -274,6 +396,7 @@ export default function Contratos({ abrirContrato }) {
         cidade: "",
         uf: "SC",
         status: "Ativo",
+        statusOriginal: "ativo",
       });
 
       setEditando(false);
@@ -320,6 +443,20 @@ export default function Contratos({ abrirContrato }) {
       );
 
       return;
+    }
+
+    // Move a pasta do contrato no Drive entre Contratos Ativos/Inativos.
+    if (item.drive_pasta_id) {
+      try {
+        await moverPastaContratoNoDrive(item.drive_pasta_id, novoStatus === "ativo");
+      } catch (erroDrive) {
+        console.error("Falha ao mover a pasta do contrato no Drive:", erroDrive);
+        alert(
+          `O contrato foi ${novoStatus === "ativo" ? "reativado" : "inativado"}, mas não foi possível mover a pasta dele no Google Drive agora.\n\n` +
+            (erroDrive.message || "") +
+            "\n\nMova a pasta manualmente ou tente novamente mais tarde (a próxima sincronização também corrige isso)."
+        );
+      }
     }
 
     await carregarContratos();
@@ -423,6 +560,12 @@ export default function Contratos({ abrirContrato }) {
         </div>
 
       </div>
+
+      {avisoSincronizacaoDrive && (
+        <p style={{ margin: "0 0 14px", color: "#52514e", fontSize: "13px" }}>
+          {avisoSincronizacaoDrive}
+        </p>
+      )}
 
       <div className="filtros-contratos">
         <label className="filtro-pesquisa" htmlFor="pesquisar-contrato">

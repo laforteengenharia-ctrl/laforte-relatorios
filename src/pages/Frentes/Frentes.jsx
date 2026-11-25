@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./Frentes.css";
 import { supabase } from "../../services/supabase";
+import {
+  criarPastaFrenteNoDrive,
+  moverPastaFrenteNoDrive,
+  sincronizarEstruturaDrive,
+} from "../../services/estruturaDrive";
 
 export default function Frentes({
   contratoSelecionado: contratoSelecionadoProp,
@@ -36,6 +41,10 @@ export default function Frentes({
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [alterandoSituacao, setAlterandoSituacao] = useState(false);
 
+  // Aviso discreto (não bloqueia a tela) sobre a última sincronização
+  // automática com o Drive, feita toda vez que a tela abre.
+  const [avisoSincronizacaoDrive, setAvisoSincronizacaoDrive] = useState("");
+
   // ============================================================
   // CONTRATOS
   // ============================================================
@@ -45,7 +54,7 @@ export default function Frentes({
 
     const { data, error } = await supabase
       .from("contratos")
-      .select("id, numero, nome")
+      .select("id, numero, nome, drive_pasta_id")
       .order("id", { ascending: false });
 
     if (error) {
@@ -108,8 +117,78 @@ export default function Frentes({
     setCarregandoFrentes(false);
   }
 
+  // ============================================================
+  // SINCRONIZAÇÃO AUTOMÁTICA COM O DRIVE
+  // ============================================================
+  // Toda vez que esta tela abre, confere silenciosamente se alguém criou ou
+  // moveu uma pasta de contrato/frente direto no Google Drive, e atualiza o
+  // banco de acordo (ver src/services/estruturaDrive.js), antes de carregar
+  // a lista de contratos. Erros aqui não bloqueiam a tela.
+
+  // Mantém a referência do contrato atualmente aberto sempre atualizada,
+  // para a sincronização em segundo plano (abaixo) saber de qual contrato
+  // recarregar as frentes quando terminar — sem isso, o efeito abaixo (que
+  // só roda uma vez, ao montar a tela) enxergaria sempre o valor inicial.
+  const contratoSelecionadoRef = useRef(contratoSelecionado);
   useEffect(() => {
+    contratoSelecionadoRef.current = contratoSelecionado;
+  }, [contratoSelecionado]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    // Carrega a lista de contratos imediatamente (consulta rápida e direta
+    // no banco), sem esperar a sincronização com o Drive. A sincronização
+    // varre a estrutura inteira de pastas (Contratos Ativos + Inativos) no
+    // Google Drive e pode demorar bem mais — por isso ela roda em segundo
+    // plano, sem travar a tela, e só recarrega o que for preciso se tiver
+    // mudado algo.
     carregarContratos();
+
+    async function sincronizarEmSegundoPlano() {
+      try {
+        const { totais, avisos } = await sincronizarEstruturaDrive();
+        if (!ativo) return;
+
+        const mudou =
+          totais.contratosNovos ||
+          totais.frentesNovas ||
+          totais.medicoesNovas ||
+          totais.statusAtualizados ||
+          totais.situacoesAtualizadas;
+
+        if (mudou) {
+          setAvisoSincronizacaoDrive(
+            `Sincronizado com o Drive: ${totais.contratosNovos} contrato(s) novo(s), ` +
+              `${totais.frentesNovas} frente(s) nova(s), ${totais.situacoesAtualizadas} situação(ões) de obra atualizada(s).`
+          );
+          await carregarContratos();
+          if (contratoSelecionadoRef.current) {
+            await carregarFrentes(contratoSelecionadoRef.current);
+          }
+        } else if (avisos.length) {
+          setAvisoSincronizacaoDrive(
+            `Sincronizado com o Drive (${avisos.length} aviso(s) sobre pastas fora do padrão — veja o console).`
+          );
+          console.warn("Avisos da sincronização com o Drive:", avisos);
+        } else {
+          setAvisoSincronizacaoDrive("");
+        }
+      } catch (erro) {
+        console.error("Falha ao sincronizar estrutura com o Drive:", erro);
+        if (ativo) {
+          setAvisoSincronizacaoDrive(
+            "Não foi possível sincronizar com o Google Drive agora (" + (erro.message || "erro desconhecido") + ")."
+          );
+        }
+      }
+    }
+
+    sincronizarEmSegundoPlano();
+
+    return () => {
+      ativo = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -263,18 +342,24 @@ export default function Frentes({
       return;
     }
 
-    const valorPastaDrive = drivePastaId.trim();
-    const idEncontrado = valorPastaDrive.match(/\/folders\/([\w-]+)/i);
-    const pastaFotosId = idEncontrado?.[1] || valorPastaDrive;
+    // Ao EDITAR, o campo de pasta do Drive continua disponível para corrigir
+    // manualmente um vínculo errado, se necessário.
+    let pastaFotosIdManual = null;
 
-    if (!pastaFotosId) {
-      alert("Informe o link ou o ID da pasta Fotos desta frente no Google Drive.");
-      return;
-    }
+    if (editandoId) {
+      const valorPastaDrive = drivePastaId.trim();
+      const idEncontrado = valorPastaDrive.match(/\/folders\/([\w-]+)/i);
+      pastaFotosIdManual = idEncontrado?.[1] || valorPastaDrive;
 
-    if (/^https?:\/\//i.test(valorPastaDrive) && !idEncontrado) {
-      alert("O link informado não parece ser de uma pasta do Google Drive. Copie o link da pasta Fotos.");
-      return;
+      if (!pastaFotosIdManual) {
+        alert("Informe o link ou o ID da pasta Fotos desta frente no Google Drive.");
+        return;
+      }
+
+      if (/^https?:\/\//i.test(valorPastaDrive) && !idEncontrado) {
+        alert("O link informado não parece ser de uma pasta do Google Drive. Copie o link da pasta Fotos.");
+        return;
+      }
     }
 
     setSalvando(true);
@@ -285,7 +370,7 @@ export default function Frentes({
           .from("frentes")
           .update({
             nome: nome.trim(),
-            drive_pasta_id: pastaFotosId,
+            drive_pasta_id: pastaFotosIdManual,
           })
           .eq("id", editandoId);
 
@@ -308,18 +393,20 @@ export default function Frentes({
               ) + 1
             : 1;
 
-        const { error } = await supabase
+        const { data: novaFrente, error } = await supabase
           .from("frentes")
           .insert([
             {
               contrato_id: Number(contratoSelecionado),
               nome: nome.trim(),
-              drive_pasta_id: pastaFotosId,
+              drive_pasta_id: null,
               ordem: novaOrdem,
               status: "ativo",
               situacao: "em_andamento",
             },
-          ]);
+          ])
+          .select("id")
+          .single();
 
         if (error) {
           console.error("Erro ao criar frente:", error);
@@ -329,6 +416,47 @@ export default function Frentes({
           );
 
           return;
+        }
+
+        // Cria a pasta da frente no Drive (dentro de OBRAS EM ANDAMENTO do
+        // contrato, já com a subpasta Fotos) e salva o ID dela na frente
+        // recém-criada. Se o contrato ainda não tiver pasta no Drive (por
+        // exemplo, criado antes desta funcionalidade existir), a frente
+        // continua cadastrada sem pasta — pode ser vinculada depois editando
+        // a frente ou criando a pasta manualmente no padrão esperado.
+        const contratoAtual = contratos.find(
+          (item) => String(item.id) === String(contratoSelecionado)
+        );
+
+        if (contratoAtual?.drive_pasta_id) {
+          try {
+            const drivePastaId = await criarPastaFrenteNoDrive(
+              contratoAtual.drive_pasta_id,
+              nome.trim()
+            );
+            const { error: erroPasta } = await supabase
+              .from("frentes")
+              .update({ drive_pasta_id: drivePastaId })
+              .eq("id", novaFrente.id);
+            if (erroPasta) {
+              console.error("Falha ao salvar o ID da pasta da frente:", erroPasta);
+            }
+          } catch (erroDrive) {
+            console.error("Falha ao criar a pasta da frente no Drive:", erroDrive);
+            alert(
+              "A frente foi criada, mas não foi possível criar a pasta dela no Google Drive agora.\n\n" +
+                (erroDrive.message || "") +
+                "\n\nCrie a pasta manualmente em OBRAS EM ANDAMENTO, com o nome \"" +
+                nome.trim() +
+                '" e uma subpasta Fotos, e depois edite a frente aqui informando o ID dessa pasta Fotos.'
+            );
+          }
+        } else {
+          alert(
+            "A frente foi criada, mas o contrato ainda não tem uma pasta vinculada no Google Drive, " +
+              "então a pasta da frente não pôde ser criada automaticamente. " +
+              "Crie a pasta manualmente e depois edite a frente aqui informando o ID da pasta Fotos."
+          );
         }
       }
 
@@ -420,6 +548,19 @@ export default function Frentes({
           return;
         }
 
+        if (frente.drive_pasta_id) {
+          try {
+            await moverPastaFrenteNoDrive(frente.drive_pasta_id, false);
+          } catch (erroDrive) {
+            console.error("Falha ao mover a pasta da frente no Drive:", erroDrive);
+            alert(
+              "A frente foi finalizada, mas não foi possível mover a pasta dela no Google Drive agora.\n\n" +
+                (erroDrive.message || "") +
+                "\n\nMova a pasta manualmente para OBRAS FINALIZADAS ou tente novamente mais tarde (a próxima sincronização também corrige isso)."
+            );
+          }
+        }
+
         await reorganizarOrdemAtivas(false);
         await carregarFrentes(contratoSelecionado);
 
@@ -489,6 +630,19 @@ export default function Frentes({
         );
 
         return;
+      }
+
+      if (frente.drive_pasta_id) {
+        try {
+          await moverPastaFrenteNoDrive(frente.drive_pasta_id, true);
+        } catch (erroDrive) {
+          console.error("Falha ao mover a pasta da frente no Drive:", erroDrive);
+          alert(
+            "A frente foi reaberta, mas não foi possível mover a pasta dela no Google Drive agora.\n\n" +
+              (erroDrive.message || "") +
+              "\n\nMova a pasta manualmente para OBRAS EM ANDAMENTO ou tente novamente mais tarde (a próxima sincronização também corrige isso)."
+          );
+        }
       }
 
       await reorganizarOrdemAtivas(false);
@@ -779,6 +933,23 @@ export default function Frentes({
         return;
       }
 
+      if (frente.drive_pasta_id && contratoDestino.drive_pasta_id) {
+        try {
+          await moverPastaFrenteNoDrive(
+            frente.drive_pasta_id,
+            situacaoAtual !== "finalizada",
+            contratoDestino.drive_pasta_id
+          );
+        } catch (erroDrive) {
+          console.error("Falha ao mover a pasta da frente no Drive:", erroDrive);
+          alert(
+            "A frente foi transferida, mas não foi possível mover a pasta dela no Google Drive agora.\n\n" +
+              (erroDrive.message || "") +
+              "\n\nMova a pasta manualmente para o contrato de destino ou tente novamente mais tarde (a próxima sincronização não move pastas entre contratos automaticamente)."
+          );
+        }
+      }
+
       setTransferindoId(null);
       setNovoContratoId("");
 
@@ -840,6 +1011,28 @@ export default function Frentes({
         );
 
         return;
+      }
+
+      // Arquivar sempre manda a pasta para OBRAS FINALIZADAS (junto com as
+      // obras finalizadas, já que ambas significam "não está mais em
+      // andamento"). Reativar devolve a pasta para onde a situação da frente
+      // indica (em andamento ou finalizada).
+      if (frente.drive_pasta_id) {
+        try {
+          const emAndamento =
+            novoStatus === "arquivado"
+              ? false
+              : (frente.situacao || "em_andamento") !== "finalizada";
+
+          await moverPastaFrenteNoDrive(frente.drive_pasta_id, emAndamento);
+        } catch (erroDrive) {
+          console.error("Falha ao mover a pasta da frente no Drive:", erroDrive);
+          alert(
+            `A frente foi ${novoStatus === "arquivado" ? "arquivada" : "reativada"}, mas não foi possível mover a pasta dela no Google Drive agora.\n\n` +
+              (erroDrive.message || "") +
+              "\n\nMova a pasta manualmente ou tente novamente mais tarde (a próxima sincronização também corrige isso quando a frente está ativa)."
+          );
+        }
       }
 
       if (
@@ -1213,6 +1406,12 @@ export default function Frentes({
         </div>
       </div>
 
+      {avisoSincronizacaoDrive && (
+        <p style={{ margin: "0 0 14px", color: "#52514e", fontSize: "13px" }}>
+          {avisoSincronizacaoDrive}
+        </p>
+      )}
+
       {/* ======================================================
           CONTRATO
       ====================================================== */}
@@ -1294,29 +1493,35 @@ export default function Frentes({
               disabled={salvando}
             />
 
-            <label
-              className="frente-pasta-drive-campo"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-                width: "100%",
-              }}
-            >
-              <span>Pasta Fotos desta frente no Google Drive</span>
-              <input
-                type="text"
-                placeholder="Cole o link da pasta Fotos ou somente o ID"
-                value={drivePastaId}
-                onChange={(e) => setDrivePastaId(e.target.value)}
-                disabled={salvando}
-                required
-                style={{ width: "100%" }}
-              />
+            {editandoId ? (
+              <label
+                className="frente-pasta-drive-campo"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  width: "100%",
+                }}
+              >
+                <span>Pasta Fotos desta frente no Google Drive</span>
+                <input
+                  type="text"
+                  placeholder="Cole o link da pasta Fotos ou somente o ID"
+                  value={drivePastaId}
+                  onChange={(e) => setDrivePastaId(e.target.value)}
+                  disabled={salvando}
+                  required
+                  style={{ width: "100%" }}
+                />
+                <small style={{ color: "#64748b", fontSize: "0.85rem" }}>
+                  Só altere isto se a pasta vinculada estiver errada.
+                </small>
+              </label>
+            ) : (
               <small style={{ color: "#64748b", fontSize: "0.85rem" }}>
-                A pasta precisa conter as subpastas das medições, por exemplo: Medição 08.
+                A pasta desta frente será criada automaticamente no Google Drive, dentro de "OBRAS EM ANDAMENTO" do contrato.
               </small>
-            </label>
+            )}
 
             <button
               type="submit"
