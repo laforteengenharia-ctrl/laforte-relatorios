@@ -874,10 +874,57 @@ export default function Frentes({
   // EXCLUSÃO
   // ============================================================
 
+  // Excluir uma frente apaga em cascata, no banco de dados, os vínculos
+  // dela com medições e as fotos já selecionadas para relatórios dessa
+  // frente. Por isso, antes de excluir, conferimos se existe algo
+  // vinculado: se existir, bloqueamos a exclusão e orientamos a usar
+  // "Arquivar" em vez de apagar o histórico. Só é possível excluir de
+  // fato uma frente sem nenhuma medição e nenhuma foto de relatório
+  // vinculada.
+
   async function excluirFrente(id) {
+    const [
+      { count: totalMedicoes, error: erroMedicoes },
+      { count: totalFotosRelatorio, error: erroFotosRelatorio },
+    ] = await Promise.all([
+      supabase
+        .from("medicao_frentes")
+        .select("medicao_id", { count: "exact", head: true })
+        .eq("frente_id", id),
+      supabase
+        .from("relatorio_fotos")
+        .select("id", { count: "exact", head: true })
+        .eq("frente_id", id),
+    ]);
+
+    if (erroMedicoes || erroFotosRelatorio) {
+      console.error(
+        "Erro ao conferir dados vinculados à frente:",
+        erroMedicoes || erroFotosRelatorio
+      );
+
+      alert(
+        "Não foi possível conferir se esta frente possui medições ou fotos de relatório vinculadas. Tente novamente."
+      );
+
+      return;
+    }
+
+    if ((totalMedicoes || 0) > 0 || (totalFotosRelatorio || 0) > 0) {
+      alert(
+        "Esta frente/obra não pode ser excluída porque possui dados vinculados:\n\n" +
+          `- ${totalMedicoes || 0} medição(ões) vinculada(s)\n` +
+          `- ${totalFotosRelatorio || 0} foto(s) de relatório vinculada(s)\n\n` +
+          "Excluir a frente apagaria tudo isso sem possibilidade de desfazer. " +
+          "Para preservar o histórico, use \"Arquivar\" em vez de excluir."
+      );
+
+      return;
+    }
+
     const confirmar = window.confirm(
-      "Deseja realmente excluir esta frente/obra?\n\n" +
-        "Para preservar o histórico, prefira arquivar quando a frente já tiver sido utilizada."
+      "Esta frente/obra não possui medições nem fotos de relatório vinculadas.\n\n" +
+        "Deseja realmente excluí-la? Esta ação não poderá ser desfeita."
     );
 
     if (!confirmar) {

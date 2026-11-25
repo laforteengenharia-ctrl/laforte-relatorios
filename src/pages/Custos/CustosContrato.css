@@ -1,0 +1,66 @@
+.custos-contrato { width: 100%; max-width: 1120px; margin: 0 auto; padding: 24px 30px 48px; color: #000; font-family: "Segoe UI", Arial, sans-serif; }
+.custos-contrato-cabecalho { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+.custos-contrato-voltar { min-height: 42px; padding: 9px 16px; color: #000; background: #fff; border: 1px solid #cbd5df; border-radius: 8px; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; }
+.custos-contrato-voltar:hover { background: #f8fafc; border-color: #9eacb9; }
+.custos-contrato-identificacao { flex: 1 1 260px; text-align: center; }
+.custos-contrato-identificacao h1 { margin: 0; color: #000; font-family: inherit; font-size: clamp(26px, 3.4vw, 34px); font-weight: 650; line-height: 1.25; }
+.custos-contrato-identificacao p { margin: 6px 0 0; color: #000; font-size: 15px; line-height: 1.5; }
+.custos-contrato-atualizar { min-height: 42px; padding: 9px 16px; color: #000; background: #fff; border: 1px solid #cbd5df; border-radius: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 650; white-space: nowrap; }
+.custos-contrato-atualizar:hover:not(:disabled) { background: #f8fafc; border-color: #9eacb9; }
+.custos-contrato-atualizar:disabled { opacity: .65; cursor: wait; }
+.custos-contrato-aviso-tempo { margin: 14px 0 20px; color: #52514e; font-size: 13px; text-align: center; }
+.custos-contrato-erro-geral { padding: 14px 16px; color: #9f2424; background: #fdf1f1; border: 1px solid #f0cccc; border-radius: 8px; font-size: 14px; }
+.custos-contrato-aviso-erro { margin-bottom: 18px; padding: 11px 13px; color: #7a4b00; background: #fff6e8; border: 1px solid #f0ddb0; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.custos-contrato-resumo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.custos-contrato-resumo-card { display: flex; flex-direction: column; gap: 4px; padding: 18px 22px; color: #000; background: #fff; border: 1px solid #d8e0e8; border-radius: 12px; box-shadow: 0 4px 14px rgba(22, 36, 52, .04); }
+.custos-contrato-resumo-rotulo { color: #000; font-size: 13px; font-weight: 600; }
+.custos-contrato-resumo-card strong { color: #000; font-size: 26px; font-weight: 700; }
+.custos-contrato-resumo-detalhe { color: #52514e; font-size: 12px; }
+.custos-contrato-vazio { display: flex; min-height: 140px; align-items: center; justify-content: center; color: #000; background: #f8fafc; border: 1px dashed #cbd5df; border-radius: 10px; text-align: center; font-size: 14px; }
+.custos-contrato-cartao { padding: 22px; color: #000; background: #fff; border: 1px solid #d8e0e8; border-radius: 12px; box-shadow: 0 4px 14px rgba(22, 36, 52, .04); }
+.custos-contrato-visualizacoes { display: inline-flex; gap: 5px; margin-bottom: 18px; padding: 4px; background: #f1f4f7; border: 1px solid #e0e6ec; border-radius: 9px; }
+.custos-contrato-visualizacoes button { min-height: 36px; padding: 7px 14px; color: #000; background: transparent; border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
+.custos-contrato-visualizacoes button.ativo { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.custos-contrato-grafico-titulo { margin: 0 0 14px; color: #000; font-size: 15px; font-weight: 650; text-align: center; }
+.custos-contrato-info { margin: 0 0 14px; padding: 11px 13px; color: #000; background: #f5f7f9; border: 1px solid #e0e6ec; border-radius: 8px; font-size: 13px; }
+.custos-contrato-pizza { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; margin-bottom: 22px; }
+.custos-contrato-pizza-svg { width: 190px; height: 190px; flex: 0 0 auto; }
+.custos-contrato-pizza-rotulo { font-size: 11px; font-weight: 700; }
+.custos-contrato-pizza-legenda { display: grid; flex: 0 1 auto; justify-content: center; align-content: start; gap: 7px 22px; margin: 0; padding: 0; list-style: none; }
+.custos-contrato-pizza-legenda li { display: grid; grid-template-columns: 12px minmax(90px, 1fr) auto; align-items: center; column-gap: 8px; padding: 4px 10px; border-radius: 6px; font-size: 13px; }
+.custos-contrato-pizza-legenda li.em-foco { background: #eef2f5; }
+.custos-contrato-pizza-marcador { width: 12px; height: 12px; border-radius: 3px; }
+.custos-contrato-pizza-legenda-titulo { overflow: hidden; color: #000; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.custos-contrato-pizza-legenda-valores { color: #52514e; font-size: 12px; white-space: nowrap; text-align: right; }
+.custos-contrato-lista { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.custos-contrato-linha { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid #e5e9ee; border-radius: 9px; }
+.custos-contrato-linha-info { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; }
+.custos-contrato-linha-nome { overflow: hidden; color: #000; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.custos-contrato-linha-titulo-bloco { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.custos-contrato-linha-periodo { overflow: hidden; color: #52514e; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.custos-contrato-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; }
+.custos-contrato-badge-andamento { color: #0a5c6b; background: #e3f3f6; }
+.custos-contrato-badge-finalizada { color: #176b45; background: #e4f3ea; }
+.custos-contrato-badge-arquivada { color: #5a5a5a; background: #efefef; }
+.custos-contrato-linha-valor { display: flex; align-items: baseline; gap: 10px; flex: 0 0 auto; }
+.custos-contrato-linha-valor strong { color: #000; font-size: 16px; }
+.custos-contrato-linha-percentual { color: #52514e; font-size: 12px; }
+.custos-contrato-linha-status { color: #52514e; font-size: 13px; font-style: italic; }
+.custos-contrato-linha-erro { max-width: 240px; overflow: hidden; color: #9f2424; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.custos-contrato-linha-acao { flex: 0 0 auto; min-height: 36px; padding: 7px 12px; color: #000; background: #fff; border: 1px solid #cbd5df; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.custos-contrato-linha-acao:hover { background: #f5f7f9; }
+.custos-contrato-vazio-linha { padding: 16px; color: #000; text-align: center; font-size: 14px; }
+@media (max-width: 760px) {
+  .custos-contrato-cabecalho { flex-direction: column; align-items: stretch; }
+  .custos-contrato-voltar, .custos-contrato-atualizar { align-self: flex-start; }
+  .custos-contrato-resumo { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .custos-contrato { padding: 18px 14px 30px; }
+  .custos-contrato-cartao { padding: 18px 14px; }
+  .custos-contrato-pizza { flex-direction: column; align-items: center; }
+  .custos-contrato-pizza-legenda { grid-template-columns: minmax(0, 260px) !important; grid-auto-flow: row !important; grid-template-rows: none !important; justify-content: center; width: 100%; }
+  .custos-contrato-linha { flex-direction: column; align-items: stretch; }
+  .custos-contrato-linha-valor { justify-content: space-between; }
+  .custos-contrato-linha-acao { width: 100%; text-align: center; }
+}

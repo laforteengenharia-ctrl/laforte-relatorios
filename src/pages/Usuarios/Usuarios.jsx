@@ -70,16 +70,6 @@ export default function Usuarios() {
         return;
       }
 
-      console.log(
-        "Usuário autenticado:",
-        session.user?.email
-      );
-
-      console.log(
-        "Perfil:",
-        session.user?.user_metadata?.perfil
-      );
-
       // Chama a Edge Function
       const { data, error } =
         await supabase.functions.invoke(
@@ -94,11 +84,6 @@ export default function Usuarios() {
             },
           }
         );
-
-      console.log(
-        "Resposta gerenciar-usuarios:",
-        data
-      );
 
       if (error) {
         console.error(
@@ -275,11 +260,6 @@ export default function Usuarios() {
             }
           );
 
-        console.log(
-          "Resposta edição:",
-          data
-        );
-
         if (error) {
           console.error(
             "Erro ao editar usuário:",
@@ -337,11 +317,6 @@ export default function Usuarios() {
               },
             }
           );
-
-        console.log(
-          "Resposta criação:",
-          data
-        );
 
         if (error) {
           console.error(
@@ -447,11 +422,6 @@ export default function Usuarios() {
             },
           }
         );
-
-      console.log(
-        "Resposta exclusão:",
-        data
-      );
 
       if (error) {
         console.error(

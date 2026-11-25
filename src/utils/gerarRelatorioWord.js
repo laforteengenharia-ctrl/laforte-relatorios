@@ -1,20 +1,26 @@
-const LARGURA_CONTEUDO_CM = 19.4;
-const FORMATS = [
-  { type: 1, ratio: 15 / 8.44, width: 15, height: 8.44 },
-  { type: 2, ratio: 13.29 / 10, width: 13.29, height: 10 },
-  { type: 3, ratio: 7.53 / 10, width: 7.53, height: 10 },
-  { type: 4, ratio: 5.62 / 10, width: 5.62, height: 10 },
-  { type: 5, ratio: 1600 / 600, width: 17.4, height: 6.525 },
-];
+import {
+  calcularTamanhoCm,
+  agruparLinhas,
+  paginarPorAltura,
+  formatarLegendas,
+  identificarFormato,
+} from "./layoutFotos";
+
+const ESPACAMENTO_FOTOS_CM = 0.6;
 const CM_TO_PX = 96 / 2.54;
 const CM_TO_TWIPS = 1440 / 2.54;
 
-function identificarFormato(width, height) {
-  if (!width || !height) return FORMATS[1];
-  const ratio = width / height;
-  return FORMATS.reduce((best, item) =>
-    Math.abs(Math.log(ratio / item.ratio)) < Math.abs(Math.log(ratio / best.ratio)) ? item : best
-  );
+function dimensoesExibicao(item) {
+  // calcularTamanhoCm é a única fonte da verdade (compartilhada com a
+  // pré-visualização em HTML) para o tamanho de exibição da foto dentro do
+  // seu formato; aqui só convertemos o resultado de cm para pixels, unidade
+  // usada pelo ImageRun do docx.
+  const tamanho = calcularTamanhoCm({
+    largura: item.image.width,
+    altura: item.image.height,
+    formato: item.formato,
+  });
+  return { width: tamanho.largura * CM_TO_PX, height: tamanho.altura * CM_TO_PX };
 }
 
 function lerDataUrl(dataUrl) {
@@ -37,7 +43,7 @@ function abrirImagem(dataUrl) {
 
 async function prepararImagem(dataUrl) {
   const image = await abrirImagem(dataUrl);
-  const maxWidth = 1800;
+  const maxWidth = 1400;
   const scale = Math.min(1, maxWidth / image.naturalWidth);
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
   const height = Math.max(1, Math.round(image.naturalHeight * scale));
@@ -50,57 +56,14 @@ async function prepararImagem(dataUrl) {
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
   const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((resultado) => resultado ? resolve(resultado) : reject(new Error("Falha ao comprimir uma foto.")), "image/jpeg", 0.82);
+    canvas.toBlob((resultado) => resultado ? resolve(resultado) : reject(new Error("Falha ao comprimir uma foto.")), "image/jpeg", 0.74);
   });
   return {
     bytes: new Uint8Array(await blob.arrayBuffer()),
     width,
     height,
-    format: identificarFormato(image.naturalWidth, image.naturalHeight),
+    formato: identificarFormato(image.naturalWidth, image.naturalHeight),
   };
-}
-
-function formatarLegendas(fotos) {
-  const unicas = [];
-  const chaves = new Set();
-  fotos.forEach(({ foto }) => {
-    const text = String(foto.legenda || "").trim();
-    const key = text.toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
-    if (text && !chaves.has(key)) {
-      chaves.add(key);
-      unicas.push(text);
-    }
-  });
-  const legendas = unicas.map((text, index) => {
-    const trimmed = text.trim();
-    return index === 0
-      ? trimmed
-      : trimmed.charAt(0).toLocaleLowerCase("pt-BR") + trimmed.slice(1);
-  });
-  if (legendas.length < 2) return legendas[0] || "";
-  if (legendas.length === 2) return `${legendas[0]} e ${legendas[1]}`;
-  return `${legendas.slice(0, -1).join(", ")} e ${legendas[legendas.length - 1]}`;
-}
-
-function agruparLinhas(items) {
-  const rows = [];
-  let current = [];
-  let currentWidth = 0;
-  items.forEach((item) => {
-    const needed = item.format.width + (current.length ? 1.8 : 0);
-    const itemNeedsOwnRow = item.format.type === 1 || item.format.type === 2;
-    const currentNeedsOwnRow = current.some((currentItem) => currentItem.format.type === 1 || currentItem.format.type === 2);
-    if (current.length && (itemNeedsOwnRow || currentNeedsOwnRow || currentWidth + needed > LARGURA_CONTEUDO_CM + 0.01)) {
-      rows.push(current);
-      current = [];
-      currentWidth = 0;
-    }
-    const gap = current.length ? 1.8 : 0;
-    current.push(item);
-    currentWidth += item.format.width + gap;
-  });
-  if (current.length) rows.push(current);
-  return rows;
 }
 
 function criarLinhaFotos(row, docx) {
@@ -116,21 +79,27 @@ function criarLinhaFotos(row, docx) {
     VerticalAlign,
     WidthType,
   } = docx;
-  const photoWidths = row.map((item) => item.format.width);
-  const spacerWidth = 1.8;
+  // dimensoesExibicao é a única fonte da verdade para o tamanho da foto: usar os
+  // mesmos valores aqui para a imagem e para a largura da célula/borda evita que a
+  // célula cresça (com a regra nova de fotos horizontais maiores) enquanto a imagem
+  // dentro dela continua limitada ao tamanho antigo, menor.
+  const tamanhos = row.map((item) => dimensoesExibicao(item));
+  const photoWidths = tamanhos.map((tamanho) => tamanho.width / CM_TO_PX);
+  const spacerWidth = ESPACAMENTO_FOTOS_CM;
   const columnWidths = [];
   const cells = [];
   row.forEach((item, index) => {
     const cellWidthCm = photoWidths[index];
-    const maxWidthPx = Math.max(1, cellWidthCm * CM_TO_PX);
-    const maxHeightPx = item.format.height * CM_TO_PX;
-    const scale = Math.min(maxWidthPx / item.image.width, maxHeightPx / item.image.height);
-    const imageWidth = Math.max(1, Math.round(item.image.width * scale));
-    const imageHeight = Math.max(1, Math.round(item.image.height * scale));
+    const imageWidth = Math.max(1, Math.round(tamanhos[index].width));
+    const imageHeight = Math.max(1, Math.round(tamanhos[index].height));
+    // Borda da foto como borda da célula da tabela (1pt = 8 oitavos de ponto):
+    // mais confiável entre Word/Google Docs do que o contorno (outline) da imagem,
+    // que pode se perder na conversão do Google Docs ao abrir a cópia do Drive.
     const border = { style: BorderStyle.SINGLE, size: 8, color: "111111" };
-    columnWidths.push(Math.round(cellWidthCm * CM_TO_TWIPS));
+    const photoWidthDxa = Math.round(cellWidthCm * CM_TO_TWIPS);
+    columnWidths.push(photoWidthDxa);
     cells.push(new TableCell({
-      width: { size: columnWidths[index], type: WidthType.DXA },
+      width: { size: photoWidthDxa, type: WidthType.DXA },
       margins: { top: 0, bottom: 0, left: 0, right: 0 },
       verticalAlign: VerticalAlign.CENTER,
       borders: { top: border, bottom: border, left: border, right: border },
@@ -206,7 +175,7 @@ export async function gerarRelatorioWord({
     progresso(index + 1, fotos.length);
     const dataUrl = await carregarImagem(foto);
     const imagem = await prepararImagem(dataUrl);
-    imagens.push({ foto, front: frentePorId.get(Number(foto.frente_id)), image: imagem, format: imagem.format });
+    imagens.push({ foto, front: frentePorId.get(Number(foto.frente_id)), image: imagem, formato: imagem.formato });
   }
 
   const children = [];
@@ -220,6 +189,9 @@ export async function gerarRelatorioWord({
 
     const primeiraFrenteDoRelatorio = primeiraPagina;
     const rows = agruparLinhas(frontPhotos);
+    // A primeira foto do relatório inteiro sai sozinha na página de abertura; o restante
+    // das fotos dessa frente começa em uma página própria (há um PageBreak logo abaixo),
+    // então não compete pela mesma cota de fotos por página.
     if (primeiraPagina && rows.length) {
       const fotoUnica = rows[0].shift();
       if (rows[0].length === 0) rows.shift();
@@ -234,7 +206,7 @@ export async function gerarRelatorioWord({
         children: [new TextRun({ text: front.nome || "Frente", bold: true, font: "Arial", size: 24 })],
       }));
       children.push(criarLinhaFotos([fotoUnica], docx));
-      const legendaInicial = formatarLegendas([fotoUnica]);
+      const legendaInicial = formatarLegendas([fotoUnica.foto.legenda]);
       if (legendaInicial) {
         children.push(new Paragraph({
           alignment: AlignmentType.CENTER,
@@ -244,10 +216,12 @@ export async function gerarRelatorioWord({
       }
       primeiraPagina = false;
     }
-    const panoramicOnly = rows.length > 0 && rows.every((row) => row.every((item) => item.format.type === 5));
-    const rowsPerPage = panoramicOnly ? 3 : 2;
-    for (let start = 0; start < rows.length; start += rowsPerPage) {
-      const pageRows = rows.slice(start, start + rowsPerPage);
+    // Orçamento de altura por página (ver layoutFotos.js): cada linha "pesa" a
+    // altura do seu formato, e uma página recebe linhas até o orçamento ser
+    // atingido, sem misturar formatos na mesma linha.
+    const paginasDeLinhas = paginarPorAltura(rows);
+    let start = 0;
+    for (const pageRows of paginasDeLinhas) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
       if (start === 0 && !primeiraFrenteDoRelatorio) {
         children.push(new Paragraph({
@@ -258,7 +232,7 @@ export async function gerarRelatorioWord({
       pageRows.forEach((row, index) => {
         children.push(criarLinhaFotos(row, docx));
         if (index === 0) {
-          const caption = formatarLegendas(pageRows.flat());
+          const caption = formatarLegendas(pageRows.flat().map((item) => item.foto.legenda));
           if (caption) {
             children.push(new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -272,6 +246,7 @@ export async function gerarRelatorioWord({
           children.push(new Paragraph({ spacing: { after: 90 }, children: [] }));
         }
       });
+      start += pageRows.length;
       primeiraPagina = false;
     }
   }

@@ -328,10 +328,57 @@ export default function Contratos({ abrirContrato }) {
   // =====================================================
   // EXCLUIR CONTRATO
   // =====================================================
+  // Excluir um contrato apaga em cascata, no banco de dados, todas as
+  // frentes e medições vinculadas a ele (e tudo que depende delas:
+  // vínculos, fotos e legendas dos relatórios). Por isso, antes de
+  // excluir, conferimos se existe algo vinculado: se existir, bloqueamos
+  // a exclusão e orientamos a usar "Inativar" em vez de apagar o
+  // histórico. Só é possível excluir de fato um contrato sem nenhuma
+  // frente e nenhuma medição cadastrada.
 
   async function excluirContrato(id) {
+    const [
+      { count: totalFrentes, error: erroFrentes },
+      { count: totalMedicoes, error: erroMedicoes },
+    ] = await Promise.all([
+      supabase
+        .from("frentes")
+        .select("id", { count: "exact", head: true })
+        .eq("contrato_id", id),
+      supabase
+        .from("medicoes")
+        .select("id", { count: "exact", head: true })
+        .eq("contrato_id", id),
+    ]);
+
+    if (erroFrentes || erroMedicoes) {
+      console.error(
+        "Erro ao conferir dados vinculados ao contrato:",
+        erroFrentes || erroMedicoes
+      );
+
+      alert(
+        "Não foi possível conferir se este contrato possui frentes ou medições vinculadas. Tente novamente."
+      );
+
+      return;
+    }
+
+    if ((totalFrentes || 0) > 0 || (totalMedicoes || 0) > 0) {
+      alert(
+        "Este contrato não pode ser excluído porque possui dados vinculados:\n\n" +
+          `- ${totalFrentes || 0} frente(s)/obra(s)\n` +
+          `- ${totalMedicoes || 0} medição(ões)\n\n` +
+          "Excluir o contrato apagaria tudo isso (incluindo fotos e legendas dos relatórios) sem possibilidade de desfazer. " +
+          "Para preservar o histórico, use \"Inativar\" em vez de excluir."
+      );
+
+      return;
+    }
+
     const confirmar = window.confirm(
-      "Deseja realmente excluir este contrato?\n\nEsta ação não poderá ser desfeita."
+      "Este contrato não possui frentes nem medições cadastradas.\n\n" +
+        "Deseja realmente excluí-lo? Esta ação não poderá ser desfeita."
     );
 
     if (!confirmar) {

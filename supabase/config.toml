@@ -1,0 +1,5 @@
+[functions.gerar-legendas-fotos]
+verify_jwt = true
+
+[functions.processar-nota-fiscal]
+verify_jwt = true

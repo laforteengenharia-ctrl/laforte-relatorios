@@ -11,9 +11,12 @@ const Contratos = lazy(() => import("./pages/Contratos/Contratos"));
 const Frentes = lazy(() => import("./pages/Frentes/Frentes"));
 const Medicoes = lazy(() => import("./pages/Medicoes/Medicoes"));
 const Fotos = lazy(() => import("./pages/Fotos/Fotos"));
+const CustosFrente = lazy(() => import("./pages/Custos/CustosFrente"));
+const CustosContrato = lazy(() => import("./pages/Custos/CustosContrato"));
 const Usuarios = lazy(() => import("./pages/Usuarios/Usuarios"));
 const Login = lazy(() => import("./pages/Login/Login"));
 const Backup = lazy(() => import("./pages/Backup/Backup"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes/Configuracoes"));
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -38,6 +41,12 @@ function App() {
 
   const [frenteSelecionada, setFrenteSelecionada] =
     useState(null);
+  const [custosRascunho, setCustosRascunho] = useState({});
+  // Para onde o botão "voltar" da tela de Custos da frente deve mandar o
+  // usuário: "frente" (veio da própria obra) ou "custos_contrato" (veio do
+  // painel de custos do contrato, que lista todas as frentes de uma vez).
+  const [origemCustosFrente, setOrigemCustosFrente] = useState("frente");
+
 
   // =====================================================
   // SESSÃO
@@ -116,6 +125,16 @@ function App() {
   }
 
   // =====================================================
+  // ABRIR CUSTOS DE UMA FRENTE A PARTIR DO PAINEL DO CONTRATO
+  // =====================================================
+
+  function abrirCustosDaFrenteNoContrato(frente) {
+    setFrenteSelecionada(frente);
+    setOrigemCustosFrente("custos_contrato");
+    setPagina("custos_frente");
+  }
+
+  // =====================================================
   // PÁGINA DA OBRA / FRENTE
   // =====================================================
 
@@ -161,139 +180,107 @@ function App() {
     }
 
     return (
-      <div style={{ padding: "30px" }}>
-        {/* =================================================
-            CABEÇALHO
-        ================================================= */}
-
-        <div
-          style={{
-            marginBottom: "30px",
-          }}
-        >
+      <main className="frente-page">
+        <header className="frente-header">
           <button
             type="button"
+            className="frente-voltar"
             onClick={fecharFrente}
-            style={{
-              padding: "9px 14px",
-              marginBottom: "20px",
-              cursor: "pointer",
-            }}
           >
             ← Voltar para obras
           </button>
 
-          <h1
-            style={{
-              marginBottom: "8px",
-            }}
-          >
-            {frenteSelecionada.nome}
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-            }}
-          >
+          <h1>{frenteSelecionada.nome}</h1>
+          <p>
             Contrato {contratoSelecionado.numero}
             {" — "}
             {contratoSelecionado.nome}
           </p>
-        </div>
+        </header>
 
-        {/* =================================================
-            ÁREAS DA OBRA
-        ================================================= */}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-          }}
-        >
-          {/* =================================================
-              CUSTO
-          ================================================= */}
-
+        <nav className="frente-areas" aria-label="Áreas da frente de obra">
           <button
             type="button"
+            className="frente-area"
             onClick={() => {
-              alert(
-                "A área de Custo será implementada nesta obra."
-              );
-            }}
-            style={{
-              padding: "30px",
-              textAlign: "left",
-              cursor: "pointer",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              background: "#fff",
+              setOrigemCustosFrente("frente");
+              setPagina("custos_frente");
             }}
           >
-            <strong
-              style={{
-                display: "block",
-                fontSize: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              💰 Custo
+            <strong>
+              <span aria-hidden="true">💰</span>
+              Custo
             </strong>
-
-            <span
-              style={{
-                color: "#64748b",
-              }}
-            >
-              Controle de custos desta obra.
-            </span>
           </button>
-
-          {/* =================================================
-              FOTOS
-          ================================================= */}
 
           <button
             type="button"
+            className="frente-area"
             onClick={() => setPagina("fotos")}
-            style={{
-              padding: "30px",
-              textAlign: "left",
-              cursor: "pointer",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              background: "#fff",
-            }}
           >
-            <strong
-              style={{
-                display: "block",
-                fontSize: "18px",
-                marginBottom: "8px",
-              }}
-            >
-              📷 Fotos
+            <strong>
+              <span aria-hidden="true">📷</span>
+              Fotos
             </strong>
-
-            <span
-              style={{
-                color: "#64748b",
-              }}
-            >
-              Fotos recebidas e organizadas por medição.
-            </span>
+          </button>
+        </nav>
+      </main>
+    );
+  }
+  // =====================================================
+  function renderCustosFrente() {
+    if (!contratoSelecionado || !frenteSelecionada) {
+      return (
+        <div style={{ padding: "30px" }}>
+          <h1>Nenhuma frente selecionada</h1>
+          <button type="button" onClick={() => setPagina("frente")}>
+            Voltar para a frente
           </button>
         </div>
-      </div>
+      );
+    }
+
+    const chaveFrente = String(frenteSelecionada.id);
+    return (
+      <CustosFrente
+        contratoSelecionado={contratoSelecionado}
+        frenteSelecionada={frenteSelecionada}
+        lancamentos={custosRascunho[chaveFrente] || []}
+        atualizarLancamentos={(itens) =>
+          setCustosRascunho((atuais) => ({
+            ...atuais,
+            [chaveFrente]: itens,
+          }))
+        }
+        voltar={() => setPagina(origemCustosFrente)}
+      />
     );
   }
 
   // =====================================================
+  // PÁGINA DE CUSTOS DO CONTRATO (todas as frentes)
+  // =====================================================
+
+  function renderCustosContrato() {
+    if (!contratoSelecionado) {
+      return (
+        <div style={{ padding: "30px" }}>
+          <h1>Nenhum contrato selecionado</h1>
+          <button type="button" onClick={() => setPagina("contratos")}>
+            Voltar para Contratos
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <CustosContrato
+        contratoSelecionado={contratoSelecionado}
+        voltar={() => setPagina("contrato")}
+        abrirCustosDaFrente={abrirCustosDaFrenteNoContrato}
+      />
+    );
+  }
   // PÁGINA DE FOTOS DA OBRA
   // =====================================================
 
@@ -383,6 +370,10 @@ function App() {
           <button type="button" className="area-contrato" onClick={() => abrirAreaContrato("relatorios")}>
             <span className="area-contrato-icone" aria-hidden="true">📷</span>
             <strong>Relatórios fotográficos</strong>
+          </button>
+          <button type="button" className="area-contrato" onClick={() => abrirAreaContrato("custos_contrato")}>
+            <span className="area-contrato-icone" aria-hidden="true">💰</span>
+            <strong>Custos</strong>
           </button>
         </nav>
       </div>
@@ -494,6 +485,11 @@ function App() {
 
       case "frente":
         return renderFrente();
+      case "custos_frente":
+        return renderCustosFrente();
+
+      case "custos_contrato":
+        return renderCustosContrato();
 
       case "fotos":
         return renderFotos();
@@ -508,11 +504,7 @@ function App() {
         return <Backup />;
 
       case "configuracoes":
-        return (
-          <div style={{ padding: "30px" }}>
-            <h1>Configurações</h1>
-          </div>
-        );
+        return <Configuracoes />;
 
       default:
         return <Dashboard />;

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../../services/supabase";
-
-const GOOGLE_DRIVE_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbykcDwsViBK50fZmdSBW1_f9_K7Blz5TPuZICdvLO-LUFsMxG6-5A94A4f1yqe1QufB5Q/exec";
+import { obterTokenDrive } from "../../services/driveAuth";
+import { GOOGLE_DRIVE_SCRIPT_URL } from "../../config/googleDriveScript";
 
 function extrairIdPasta(valor) {
   const texto = String(valor || "").trim();
@@ -36,13 +35,19 @@ export default function ImportarContratosDrive({ onConcluido }) {
     const totais = { contratosNovos: 0, frentesNovas: 0, medicoesNovas: 0, vinculosNovos: 0 };
 
     try {
+      const token = await obterTokenDrive();
       const url = new URL(GOOGLE_DRIVE_SCRIPT_URL);
       url.searchParams.set("acao", "importar_contratos");
       url.searchParams.set("pasta_contratos_id", pastaId);
+      url.searchParams.set("token", token);
       const resposta = await fetch(url.toString());
       const estrutura = await resposta.json();
       if (!resposta.ok || !estrutura.ok) {
-        throw new Error(estrutura.erro || `Falha ao consultar o Drive (HTTP ${resposta.status}).`);
+        throw new Error(
+          estrutura.erro_auth
+            ? "Sua sessão expirou. Faça login novamente para continuar."
+            : estrutura.erro || `Falha ao consultar o Drive (HTTP ${resposta.status}).`
+        );
       }
 
       const contratosDrive = Array.isArray(estrutura.contratos) ? estrutura.contratos : [];

@@ -4,18 +4,22 @@ import {
   useState,
 } from "react";
 
-const GOOGLE_DRIVE_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbykcDwsViBK50fZmdSBW1_f9_K7Blz5TPuZICdvLO-LUFsMxG6-5A94A4f1yqe1QufB5Q/exec";
+import "./Fotos.css";
+import { obterTokenDrive } from "../../services/driveAuth";
+import { fetchComRetentativa } from "../../utils/fetchComRetentativa";
+import { GOOGLE_DRIVE_SCRIPT_URL } from "../../config/googleDriveScript";
 
 async function buscarImagemDrive(arquivoId, drivePastaId, numeroMedicao, tamanho) {
+  const token = await obterTokenDrive();
   const parametros = new URLSearchParams({
     acao: "imagem",
     arquivo_id: String(arquivoId || ""),
     drive_pasta_id: String(drivePastaId || ""),
     medicao: String(numeroMedicao || ""),
     tamanho,
+    token,
   });
-  const resposta = await fetch(
+  const resposta = await fetchComRetentativa(
     `${GOOGLE_DRIVE_SCRIPT_URL}?${parametros.toString()}`
   );
 
@@ -25,6 +29,9 @@ async function buscarImagemDrive(arquivoId, drivePastaId, numeroMedicao, tamanho
 
   const dados = await resposta.json();
   if (!dados.ok || !dados.base64) {
+    if (dados.erro_auth) {
+      throw new Error("Sua sessão expirou. Faça login novamente para continuar.");
+    }
     throw new Error(dados.erro || "Imagem não disponível.");
   }
 
@@ -329,15 +336,17 @@ export default function Fotos({
       setCarregandoMedicoes(true);
       setErroMedicoes("");
 
+      const token = await obterTokenDrive();
       const url =
         `${GOOGLE_DRIVE_SCRIPT_URL}` +
         `?drive_pasta_id=${encodeURIComponent(
           pastaFotosId
         )}` +
-        `&acao=listar_medicoes`;
+        `&acao=listar_medicoes` +
+        `&token=${encodeURIComponent(token)}`;
 
       const resposta =
-        await fetch(url);
+        await fetchComRetentativa(url);
 
       if (!resposta.ok) {
         throw new Error(
@@ -350,8 +359,10 @@ export default function Fotos({
 
       if (!dados.ok) {
         throw new Error(
-          dados.erro ||
-            "Não foi possível carregar as medições."
+          dados.erro_auth
+            ? "Sua sessão expirou. Faça login novamente para continuar."
+            : dados.erro ||
+              "Não foi possível carregar as medições."
         );
       }
 
@@ -404,6 +415,7 @@ export default function Fotos({
 
       setCarregandoFotos(true);
 
+      const token = await obterTokenDrive();
       const url =
         `${GOOGLE_DRIVE_SCRIPT_URL}` +
         `?drive_pasta_id=${encodeURIComponent(
@@ -411,10 +423,11 @@ export default function Fotos({
         )}` +
         `&medicao=${encodeURIComponent(
           medicao.numero
-        )}`;
+        )}` +
+        `&token=${encodeURIComponent(token)}`;
 
       const resposta =
-        await fetch(url);
+        await fetchComRetentativa(url);
 
       if (!resposta.ok) {
         throw new Error(
@@ -427,8 +440,10 @@ export default function Fotos({
 
       if (!dados.ok) {
         throw new Error(
-          dados.erro ||
-            "Não foi possível carregar as fotos."
+          dados.erro_auth
+            ? "Sua sessão expirou. Faça login novamente para continuar."
+            : dados.erro ||
+              "Não foi possível carregar as fotos."
         );
       }
 
@@ -553,368 +568,82 @@ export default function Fotos({
   // ==========================================================
 
   return (
-    <div
-      style={{
-        minHeight: "100%",
-        padding: "30px",
-        background: "#f5f7fb",
-      }}
-    >
+    <div className="fotos-page">
 
       {/* CABEÇALHO */}
-
-      <div
-        style={{
-          maxWidth:
-            "1200px",
-          margin:
-            "0 auto 25px",
-        }}
-      >
+      <header className="fotos-cabecalho">
         <button
           type="button"
+          className="fotos-voltar"
           onClick={voltar}
-          style={{
-            padding:
-              "10px 18px",
-            border:
-              "1px solid #999",
-            borderRadius:
-              "4px",
-            background:
-              "#fff",
-            cursor:
-              "pointer",
-            fontSize:
-              "16px",
-          }}
         >
-          ←{" "}
-          {medicaoSelecionada
-            ? "Voltar para medições"
-            : "Voltar para obra"}
+          ← {medicaoSelecionada ? "Voltar para medições" : "Voltar para obra"}
         </button>
 
-        <div
-          style={{
-            textAlign:
-              "center",
-            marginTop:
-              "35px",
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize:
-                "54px",
-              color:
-                "#05050b",
-            }}
-          >
-            📷 Fotos
-          </h1>
-
-          <div
-            style={{
-              fontSize:
-                "23px",
-              color:
-                "#58729a",
-              marginTop:
-                "2px",
-            }}
-          >
-            {
-              frenteSelecionada.nome
-            }
-          </div>
-
-          <div
-            style={{
-              fontSize:
-                "20px",
-              color:
-                "#58729a",
-              marginTop:
-                "12px",
-            }}
-          >
-            Contrato{" "}
-            {
-              contratoSelecionado.numero
-            }{" "}
-            —{" "}
-            {
-              contratoSelecionado.nome
-            }
-          </div>
+        <div className="fotos-identificacao">
+          <h1><span aria-hidden="true">📷</span> Fotos</h1>
+          <p className="fotos-frente">{frenteSelecionada.nome}</p>
+          <p className="fotos-contrato">
+            Contrato {contratoSelecionado.numero}
+            {" — "}
+            {contratoSelecionado.nome}
+          </p>
         </div>
-      </div>
-
+      </header>
       {/* ======================================================
           LISTA DE MEDIÇÕES
       ====================================================== */}
 
       {!medicaoSelecionada && (
-        <div
-          style={{
-            maxWidth:
-              "1100px",
-            margin:
-              "0 auto",
-            background:
-              "#fff",
-            border:
-              "1px solid #dbe3ef",
-            borderRadius:
-              "16px",
-            padding:
-              "35px",
-            boxShadow:
-              "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div
-            style={{
-              display:
-                "flex",
-              justifyContent:
-                "space-between",
-              alignItems:
-                "center",
-              gap:
-                "20px",
-              marginBottom:
-                "28px",
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize:
-                  "30px",
-              }}
-            >
-              📁 Medições
-            </h2>
-
-            <div
-              style={{
-                background:
-                  "#eef5ff",
-                color:
-                  "#1756d1",
-                borderRadius:
-                  "30px",
-                padding:
-                  "12px 18px",
-                fontWeight:
-                  "600",
-              }}
-            >
-              {
-                medicoes.length
-              }{" "}
-              {medicoes.length ===
-              1
-                ? "medição"
-                : "medições"}
-            </div>
-          </div>
-
-          <p
-            style={{
-              textAlign:
-                "center",
-              color:
-                "#58729a",
-              fontSize:
-                "20px",
-              marginBottom:
-                "35px",
-            }}
-          >
-            Medições encontradas
-            na pasta Fotos
-            desta obra.
-          </p>
+        <section className="fotos-medicoes-painel">
+          <header className="fotos-medicoes-topo">
+            <h2><span aria-hidden="true">📁</span> Medições</h2>
+            <span className="fotos-medicoes-contagem">
+              {medicoes.length} {medicoes.length === 1 ? "medição" : "medições"}
+            </span>
+          </header>
 
           {carregandoMedicoes && (
-            <div
-              style={{
-                textAlign:
-                  "center",
-                padding:
-                  "35px",
-                color:
-                  "#58729a",
-                fontSize:
-                  "18px",
-              }}
-            >
-              ⏳ Carregando
-              medições do
-              Google Drive...
+            <div className="fotos-estado">
+              ⏳ Carregando medições do Google Drive...
             </div>
           )}
 
-          {!carregandoMedicoes &&
-            erroMedicoes && (
-              <div
-                style={{
-                  padding:
-                    "18px",
-                  borderRadius:
-                    "10px",
-                  background:
-                    "#fff1f2",
-                  border:
-                    "1px solid #fecdd3",
-                  color:
-                    "#be123c",
-                }}
-              >
-                {
-                  erroMedicoes
-                }
-              </div>
-            )}
+          {!carregandoMedicoes && erroMedicoes && (
+            <div className="fotos-erro">{erroMedicoes}</div>
+          )}
 
-          {!carregandoMedicoes &&
-            !erroMedicoes &&
-            medicoes.length ===
-              0 && (
-              <div
-                style={{
-                  textAlign:
-                    "center",
-                  padding:
-                    "40px",
-                  color:
-                    "#64748b",
-                  fontSize:
-                    "18px",
-                }}
-              >
-                Nenhuma medição
-                foi encontrada
-                na pasta Fotos
-                desta obra.
-              </div>
-            )}
+          {!carregandoMedicoes && !erroMedicoes && medicoes.length === 0 && (
+            <div className="fotos-vazio">
+              Nenhuma medição foi encontrada na pasta Fotos desta obra.
+            </div>
+          )}
 
-          {!carregandoMedicoes &&
-            !erroMedicoes &&
-            medicoes.length >
-              0 && (
-              <div
-                style={{
-                  display:
-                    "flex",
-                  flexDirection:
-                    "column",
-                  gap:
-                    "15px",
-                }}
-              >
-                {medicoes.map(
-                  (medicao) => (
-                    <div
-                      key={
-                        medicao.id
-                      }
-                      style={{
-                        border:
-                          "1px solid #dbe3ef",
-                        borderRadius:
-                          "14px",
-                        padding:
-                          "22px 25px",
-                        background:
-                          "#f8fafc",
-                        display:
-                          "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "space-between",
-                        gap:
-                          "20px",
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            fontSize:
-                              "22px",
-                            fontWeight:
-                              "700",
-                            color:
-                              "#111827",
-                          }}
-                        >
-                          📁 Medição{" "}
-                          {String(
-                            medicao.numero
-                          ).padStart(
-                            2,
-                            "0"
-                          )}
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop:
-                              "8px",
-                            color:
-                              "#64748b",
-                            fontSize:
-                              "17px",
-                          }}
-                        >
-                          {
-                            medicao.nome
-                          }
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          abrirFotos(
-                            medicao
-                          )
-                        }
-                        style={{
-                          padding:
-                            "12px 20px",
-                          border:
-                            "1px solid #cbd5e1",
-                          borderRadius:
-                            "9px",
-                          background:
-                            "#fff",
-                          cursor:
-                            "pointer",
-                          fontSize:
-                            "16px",
-                          fontWeight:
-                            "600",
-                          whiteSpace:
-                            "nowrap",
-                        }}
-                      >
-                        📷 Ver fotos
-                      </button>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-        </div>
+          {!carregandoMedicoes && !erroMedicoes && medicoes.length > 0 && (
+            <div className="fotos-medicoes-lista">
+              {medicoes.map((medicao) => (
+                <article className="fotos-medicao" key={medicao.id}>
+                  <div className="fotos-medicao-dados">
+                    <h3>
+                      <span aria-hidden="true">📁</span>
+                      Medição {String(medicao.numero).padStart(2, "0")}
+                    </h3>
+                    <p>{medicao.nome}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="fotos-ver-botao"
+                    onClick={() => abrirFotos(medicao)}
+                  >
+                    <span aria-hidden="true">📷</span>
+                    Ver fotos
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       )}
-
       {/* ======================================================
           GALERIA
       ====================================================== */}

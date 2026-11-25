@@ -1,0 +1,176 @@
+.fotos-page {
+  min-height: 100%;
+  padding: 28px 30px 44px;
+  color: #000;
+  background: #f1f5f9;
+  font-family: "Segoe UI", Arial, sans-serif;
+  text-align: left;
+}
+
+.fotos-cabecalho {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto 30px;
+}
+
+.fotos-voltar,
+.fotos-ver-botao {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 18px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #cbd5df;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.fotos-voltar:hover,
+.fotos-ver-botao:hover {
+  background: #f8fafc;
+  border-color: #9eacb9;
+}
+
+.fotos-identificacao {
+  margin-top: 34px;
+  text-align: center;
+}
+
+.fotos-identificacao h1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  color: #000;
+  font-family: inherit;
+  font-size: clamp(36px, 4vw, 48px);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: normal;
+}
+
+.fotos-identificacao h1 span { font-size: .8em; }
+.fotos-frente {
+  margin: 10px 0 0;
+  color: #000;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.fotos-contrato {
+  margin: 8px 0 0;
+  color: #000;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.fotos-medicoes-painel {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #d8e0e8;
+  border-radius: 14px;
+  box-shadow: 0 5px 18px rgba(22, 36, 52, .05);
+}
+.fotos-medicoes-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.fotos-medicoes-topo h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: #000;
+  font-family: inherit;
+  font-size: 27px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: normal;
+}
+.fotos-medicoes-contagem {
+  padding: 10px 16px;
+  color: #000;
+  background: #f1f4f7;
+  border: 1px solid #e0e6ec;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fotos-medicoes-lista { display: flex; flex-direction: column; gap: 14px; }
+.fotos-medicao {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 24px;
+  color: #000;
+  background: #f8fafc;
+  border: 1px solid #d8e0e8;
+  border-radius: 12px;
+}
+.fotos-medicao-dados h3 {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0;
+  color: #000;
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.fotos-medicao-dados p {
+  margin: 8px 0 0;
+  color: #000;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.fotos-ver-botao { flex: 0 0 auto; min-width: 150px; }
+.fotos-estado,
+.fotos-vazio {
+  padding: 30px 18px;
+  color: #000;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+.fotos-erro {
+  padding: 16px 18px;
+  color: #9f2424;
+  background: #fff5f5;
+  border: 1px solid #f0caca;
+  border-radius: 9px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.fotos-voltar:focus-visible,
+.fotos-ver-botao:focus-visible {
+  outline: 3px solid rgba(23, 107, 118, .25);
+  outline-offset: 3px;
+}
+@media (max-width: 680px) {
+  .fotos-page { padding: 20px 14px 30px; }
+  .fotos-identificacao { margin-top: 26px; }
+  .fotos-identificacao h1 { font-size: 36px; }
+  .fotos-medicoes-painel { padding: 20px 16px; }
+  .fotos-medicoes-topo { align-items: flex-start; }
+  .fotos-medicoes-topo h2 { font-size: 23px; }
+  .fotos-medicao { align-items: flex-start; flex-direction: column; padding: 18px; }
+  .fotos-ver-botao { width: 100%; }
+}

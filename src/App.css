@@ -147,3 +147,93 @@ body{
 }
 .relatorios-voltar:hover { background: #f3f5f7; }
 @media (max-width: 768px) { .relatorios-cabecalho { padding: 20px 14px 0; } .relatorios-cabecalho h1 { font-size: 28px; } }
+
+/* Tela inicial de cada frente de obra */
+.frente-page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 30px 48px;
+  color: #000;
+  font-family: inherit;
+}
+.frente-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 42px;
+  text-align: center;
+}
+.frente-voltar {
+  align-self: flex-start;
+  min-height: 42px;
+  margin-bottom: 38px;
+  padding: 9px 16px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #cbd5df;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  transition: background .16s ease, border-color .16s ease;
+}
+.frente-voltar:hover { background: #f8fafc; border-color: #9eacb9; }
+.frente-header h1 {
+  margin: 0 0 12px;
+  color: #000;
+  font-family: inherit;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: normal;
+}
+.frente-header p { margin: 0; color: #000; font-size: 17px; line-height: 1.5; }
+.frente-areas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+.frente-area {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 30px 34px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #d8e0e8;
+  border-radius: 14px;
+  box-shadow: 0 5px 18px rgba(22, 36, 52, .06);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.frente-area:hover {
+  transform: translateY(-2px);
+  border-color: #aebbc8;
+  box-shadow: 0 9px 24px rgba(22, 36, 52, .1);
+}
+.frente-area strong {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #000;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.frente-area strong span { flex: 0 0 auto; font-size: 23px; }
+.frente-voltar:focus-visible, .frente-area:focus-visible {
+  outline: 3px solid rgba(23, 107, 118, .25);
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .frente-page { padding: 18px 14px 32px; }
+  .frente-header { margin-bottom: 28px; }
+  .frente-voltar { margin-bottom: 28px; }
+  .frente-header h1 { font-size: 32px; }
+  .frente-areas { grid-template-columns: 1fr; gap: 14px; }
+  .frente-area { min-height: 112px; padding: 24px; }
+}
